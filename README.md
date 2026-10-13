@@ -18,7 +18,7 @@ Interfaz web de RestoAPI: login, panel por rol, carta, mesas, reservas, pedidos 
 
 ## Puesta en marcha
 
-Requisitos: **Node.js 20+** y **Git**.
+Requisitos: **Node.js 20.19+ o 22.12+** (lo que pide Vite; está en `engines` del `package.json`) y **Git**.
 
 ```bash
 # 1. Clonar y situarse en dev
