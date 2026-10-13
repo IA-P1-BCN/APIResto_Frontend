@@ -1,16 +1,13 @@
 import { useState, type FormEvent } from 'react'
-import { Navigate, useLocation, useNavigate, type Location } from 'react-router-dom'
+import { Navigate } from 'react-router-dom'
 import { getErrorMessage, isUnauthorized } from '../api/errors'
 import { MOCK_PASSWORD, MOCK_USERS } from '../api/mockAuth'
 import { USE_MOCK } from '../config'
 import { useAuth } from '../context/useAuth'
-import { ROLE_LABEL } from '../routes/navigation'
+import { homeFor, ROLE_LABEL } from '../routes/navigation'
 
 export default function LoginPage() {
-  const { login, status } = useAuth()
-  const navigate = useNavigate()
-  const location = useLocation()
-  const from = (location.state as { from?: Location } | null)?.from?.pathname ?? '/'
+  const { login, status, user } = useAuth()
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -18,7 +15,7 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
-  if (status === 'authenticated') return <Navigate to={from} replace />
+  if (status === 'authenticated' && user) return <Navigate to={homeFor(user.role)} replace />
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -26,7 +23,6 @@ export default function LoginPage() {
     setSubmitting(true)
     try {
       await login(email, password)
-      navigate(from, { replace: true })
     } catch (err) {
       setError(isUnauthorized(err) ? 'Email o contraseña incorrectos' : getErrorMessage(err))
     } finally {

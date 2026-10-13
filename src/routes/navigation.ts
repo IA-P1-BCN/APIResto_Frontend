@@ -43,3 +43,14 @@ export function navItemsFor(role: Role): NavItem[] {
 export function labelFor(item: NavItem, role: Role): string {
   return item.labelByRole?.[role] ?? item.label
 }
+
+const HOME_BY_ROLE: Partial<Record<Role, string>> = {
+  admin: '/',
+  waiter: '/pedidos',
+  kitchen: '/cocina',
+  customer: '/carta',
+}
+
+export function homeFor(role: Role): string {
+  return HOME_BY_ROLE[role] ?? '/'
+}

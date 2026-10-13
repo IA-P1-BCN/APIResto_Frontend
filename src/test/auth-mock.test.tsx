@@ -16,16 +16,36 @@ describe('login y navegación por rol (modo simulado)', () => {
     expect(await screen.findByText('Inicia sesión para continuar')).toBeInTheDocument()
   })
 
-  it('tras el login vuelve a la página que se había pedido', async () => {
-    const { user } = renderApp('/mesas')
+  it.each([
+    ['admin@restoapi.dev', 'Hola, Admin Demo'],
+    ['camarero@restoapi.dev', 'Pedidos'],
+    ['cocina@restoapi.dev', 'Cocina'],
+    ['cliente@restoapi.dev', 'Carta'],
+  ])('al iniciar sesión, %s entra en su pantalla (%s)', async (email, heading) => {
+    const { user } = renderApp('/login')
+    await loginAs(user, email)
+    expect(await screen.findByRole('heading', { level: 1, name: heading })).toBeInTheDocument()
+  })
+
+  it('entra en su pantalla aunque se hubiera pedido otra, y nunca en "Sin acceso"', async () => {
+    const { user } = renderApp('/facturas')
+    await loginAs(user, 'cocina@restoapi.dev')
+    expect(await screen.findByRole('heading', { level: 1, name: 'Cocina' })).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: '403 · Sin acceso' })).not.toBeInTheDocument()
+  })
+
+  it('al cerrar sesión, el siguiente usuario entra en su pantalla y no en la del anterior', async () => {
+    localStorage.setItem('restoapi.token', 'mock-token-1')
+    const { user } = renderApp('/facturas')
+    await user.click(await screen.findByRole('button', { name: 'Cerrar sesión' }))
     await loginAs(user, 'camarero@restoapi.dev')
-    expect(await screen.findByRole('heading', { name: 'Mesas' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { level: 1, name: 'Pedidos' })).toBeInTheDocument()
   })
 
   it('el camarero ve su menú y no el de administración', async () => {
     const { user } = renderApp('/login')
     await loginAs(user, 'camarero@restoapi.dev')
-    expect(await screen.findByRole('heading', { name: 'Hola, Camarero Demo' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { level: 1, name: 'Pedidos' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Mesas' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Pedidos' })).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: 'Usuarios' })).not.toBeInTheDocument()
