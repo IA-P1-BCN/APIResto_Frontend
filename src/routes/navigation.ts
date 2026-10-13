@@ -9,7 +9,7 @@ export interface NavItem {
   hu?: string
 }
 
-const ALL_ROLES: Role[] = ['admin', 'waiter', 'kitchen', 'customer']
+const ALL_ROLES: Role[] = ['admin', 'waiter', 'kitchen', 'bartender', 'customer']
 
 export const NAV_ITEMS: NavItem[] = [
   { path: '/carta', label: 'Carta', roles: ALL_ROLES, description: 'Categorías, platos, precios y alérgenos', hu: 'HU-13' },
@@ -33,6 +33,7 @@ export const ROLE_LABEL: Record<Role, string> = {
   admin: 'Administración',
   waiter: 'Sala',
   kitchen: 'Cocina',
+  bartender: 'Barra',
   customer: 'Cliente',
 }
 
