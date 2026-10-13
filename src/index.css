@@ -698,9 +698,8 @@ td.order-items-cell {
   font-size: 1.1rem;
 }
 
-.row-actions {
-  display: flex;
-  gap: 0.4rem;
+.row-actions > * + * {
+  margin-left: 0.4rem;
 }
 
 .order-pending {
