@@ -2,8 +2,8 @@ import { useState } from 'react'
 import { getErrorMessage } from '../api/errors'
 import { mockServer } from '../api/mock/server'
 import { transitionsFor } from '../api/orderRules'
-import { updateOrderStatus } from '../api/orders'
-import type { Order, OrderStatus } from '../api/types'
+import { updateOrderItem, updateOrderStatus } from '../api/orders'
+import type { Order, OrderItem, OrderStatus } from '../api/types'
 import ErrorMessage from '../components/ErrorMessage'
 import { USE_MOCK } from '../config'
 import { useAuth } from '../context/useAuth'
@@ -24,6 +24,7 @@ export default function KitchenPage() {
   const tableNumbers = useTableNumbers(user?.role === 'admin')
   const now = useNow()
   const [changingId, setChangingId] = useState<number | null>(null)
+  const [savingItemId, setSavingItemId] = useState<number | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
 
   async function changeStatus(order: Order, next: OrderStatus) {
@@ -35,6 +36,18 @@ export default function KitchenPage() {
       setActionError(getErrorMessage(err))
     } finally {
       setChangingId(null)
+    }
+  }
+
+  async function togglePrepared(order: Order, item: OrderItem) {
+    setSavingItemId(item.id)
+    setActionError(null)
+    try {
+      applyLocal(await updateOrderItem(order.id, item.id, { prepared: !item.prepared }))
+    } catch (err) {
+      setActionError(getErrorMessage(err))
+    } finally {
+      setSavingItemId(null)
     }
   }
 
@@ -95,16 +108,27 @@ export default function KitchenPage() {
                         </span>
                       </header>
                       {newIds.has(o.id) && <span className="chip chip-warning">Nuevo</span>}
-                      <ul className="ticket-lines">
+                      <ul className="ticket-lines" aria-label={`Platos del pedido ${o.id}`}>
                         {o.items.map((i) => (
-                          <li key={i.id}>
-                            <span>
-                              <strong>{i.quantity}×</strong> {dishLabel(i.dish_id, dishNames)}
-                            </span>
+                          <li key={i.id} className={i.prepared ? 'item-prepared' : undefined}>
+                            <label className="checkbox item-check">
+                              <input
+                                type="checkbox"
+                                checked={i.prepared}
+                                disabled={savingItemId === i.id}
+                                onChange={() => togglePrepared(o, i)}
+                              />
+                              <span>
+                                <strong>{i.quantity}×</strong> {dishLabel(i.dish_id, dishNames)}
+                              </span>
+                            </label>
                             {i.notes && <span className="ticket-note">⚠ {i.notes}</span>}
                           </li>
                         ))}
                       </ul>
+                      <span className="muted small">
+                        {o.items.filter((i) => i.prepared).length} de {o.items.length} preparados
+                      </span>
                       <div className="actions">
                         {transitionsFor(user.role, o.status)
                           .filter((t) => t.to !== 'cancelled')

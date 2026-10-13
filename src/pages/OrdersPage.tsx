@@ -1,8 +1,8 @@
 import { useCallback, useState } from 'react'
 import { getErrorMessage } from '../api/errors'
 import { ACTIVE_STATUSES, transitionsFor } from '../api/orderRules'
-import { listOrders, updateOrderStatus } from '../api/orders'
-import type { Order, OrderStatus } from '../api/types'
+import { listOrders, updateOrderItem, updateOrderStatus } from '../api/orders'
+import type { Order, OrderItem, OrderStatus } from '../api/types'
 import ErrorMessage from '../components/ErrorMessage'
 import NewOrderForm from '../components/NewOrderForm'
 import { useAuth } from '../context/useAuth'
@@ -22,6 +22,7 @@ export default function OrdersPage() {
   const [notice, setNotice] = useState<string | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
   const [changingId, setChangingId] = useState<number | null>(null)
+  const [savingItemId, setSavingItemId] = useState<number | null>(null)
 
   const fetchOrders = useCallback(() => {
     const statuses = filter === 'all' ? undefined : filter === 'active' ? ACTIVE_STATUSES : [filter]
@@ -55,6 +56,19 @@ export default function OrdersPage() {
       setActionError(getErrorMessage(error))
     } finally {
       setChangingId(null)
+    }
+  }
+
+  async function toggleServed(order: Order, item: OrderItem) {
+    setSavingItemId(item.id)
+    setActionError(null)
+    try {
+      await updateOrderItem(order.id, item.id, { served: !item.served })
+      orders.reload()
+    } catch (error) {
+      setActionError(getErrorMessage(error))
+    } finally {
+      setSavingItemId(null)
     }
   }
 
@@ -131,12 +145,35 @@ export default function OrdersPage() {
                     <td>{formatTime(parseServerTimestamp(o.created_at))}</td>
                     <td className="order-items-cell">
                       <ul className="order-items" aria-label={`Platos del pedido ${o.id}`}>
-                        {o.items.map((i) => (
-                          <li key={i.id}>
-                            {i.quantity}× {dishLabel(i.dish_id, dishNames)}
-                          </li>
-                        ))}
+                        {o.items.map((i) => {
+                          const text = `${i.quantity}× ${dishLabel(i.dish_id, dishNames)}`
+                          const editable = o.status !== 'paid' && o.status !== 'cancelled'
+                          return (
+                            <li key={i.id} className={i.served ? 'item-served' : undefined}>
+                              {editable ? (
+                                <label className="checkbox item-check">
+                                  <input
+                                    type="checkbox"
+                                    checked={i.served}
+                                    disabled={savingItemId === i.id}
+                                    onChange={() => toggleServed(o, i)}
+                                  />
+                                  <span>{text}</span>
+                                  {i.prepared && !i.served && <span className="chip chip-ready">Listo</span>}
+                                </label>
+                              ) : (
+                                <span>
+                                  {i.served && <span aria-label="servido">✓ </span>}
+                                  {text}
+                                </span>
+                              )}
+                            </li>
+                          )
+                        })}
                       </ul>
+                      <span className="muted small">
+                        {o.items.filter((i) => i.served).length} de {o.items.length} servidos
+                      </span>
                     </td>
                     <td>{formatPrice(o.total)}</td>
                     <td>

@@ -93,7 +93,11 @@ export interface OrderItem {
   quantity: number
   unit_price: string
   notes: string | null
+  prepared: boolean
+  served: boolean
 }
+
+export type OrderItemMarks = Partial<Pick<OrderItem, 'prepared' | 'served'>>
 
 export interface Order {
   id: number

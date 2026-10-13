@@ -637,6 +637,34 @@ td.order-items-cell {
   gap: 0.15rem;
 }
 
+.order-items .item-check {
+  font-weight: normal;
+  min-width: 0;
+  padding-bottom: 0;
+}
+
+.order-items .item-served span {
+  color: var(--color-muted);
+  text-decoration: line-through;
+}
+
+.ticket-lines .item-check {
+  font-weight: normal;
+  min-width: 0;
+  padding-bottom: 0;
+}
+
+.ticket-lines .item-prepared .item-check > span {
+  color: var(--color-muted);
+  text-decoration: line-through;
+}
+
+.chip-ready {
+  background: var(--color-success-bg);
+  color: var(--color-success-text);
+  font-weight: 600;
+}
+
 .ticket-lines {
   list-style: none;
   margin: 0;

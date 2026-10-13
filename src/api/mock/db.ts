@@ -105,6 +105,8 @@ function initialOrders(): Order[] {
     quantity,
     unit_price: DISHES.find((d) => d.id === dish_id)!.price,
     notes,
+    prepared: false,
+    served: false,
   })
   const o = (id: number, table_id: number, status: Order['status'], min: number, items: OrderItem[]): Order => ({
     id,
