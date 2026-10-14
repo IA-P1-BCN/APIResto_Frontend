@@ -4,6 +4,7 @@ import { cancelReservation, deleteReservation, listReservations } from '../api/r
 import type { DiningTable, Reservation } from '../api/types'
 import EditReservationForm from '../components/EditReservationForm'
 import ErrorMessage from '../components/ErrorMessage'
+import Modal from '../components/Modal'
 import NewReservationForm from '../components/NewReservationForm'
 import { useAuth } from '../context/useAuth'
 import { useConfirm } from '../context/useConfirm'
@@ -121,16 +122,20 @@ export default function ReservationsPage() {
       )}
 
       {formOpen && (
-        <NewReservationForm initialDate={date} onCreated={handleCreated} onCancel={() => setFormOpen(false)} />
+        <Modal label="Nueva reserva" onClose={() => setFormOpen(false)}>
+          <NewReservationForm initialDate={date} onCreated={handleCreated} onCancel={() => setFormOpen(false)} />
+        </Modal>
       )}
 
       {editing && (
-        <EditReservationForm
-          key={editing.id}
-          reservation={editing}
-          onSaved={handleEdited}
-          onCancel={() => setEditing(null)}
-        />
+        <Modal label="Editar reserva" onClose={() => setEditing(null)}>
+          <EditReservationForm
+            key={editing.id}
+            reservation={editing}
+            onSaved={handleEdited}
+            onCancel={() => setEditing(null)}
+          />
+        </Modal>
       )}
 
       {notice && (

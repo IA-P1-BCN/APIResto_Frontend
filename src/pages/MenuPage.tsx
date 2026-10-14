@@ -5,6 +5,7 @@ import type { Category, Dish } from '../api/types'
 import CategoryManager from '../components/CategoryManager'
 import DishForm from '../components/DishForm'
 import ErrorMessage from '../components/ErrorMessage'
+import Modal from '../components/Modal'
 import { useAuth } from '../context/useAuth'
 import { useConfirm } from '../context/useConfirm'
 import { useQuery } from '../hooks/useQuery'
@@ -163,24 +164,28 @@ export default function MenuPage() {
       )}
 
       {isAdmin && categoriesOpen && categories.data && (
-        <CategoryManager
-          categories={categories.data}
-          onChanged={(message) => {
-            showNotice(message)
-            categories.reload()
-            dishes.reload()
-          }}
-        />
+        <Modal label="Categorías" onClose={() => setCategoriesOpen(false)}>
+          <CategoryManager
+            categories={categories.data}
+            onChanged={(message) => {
+              showNotice(message)
+              categories.reload()
+              dishes.reload()
+            }}
+          />
+        </Modal>
       )}
 
       {isAdmin && dishForm && categories.data && (
-        <DishForm
-          key={dishForm.mode === 'edit' ? dishForm.dish.id : 'new'}
-          categories={categories.data}
-          dish={dishForm.mode === 'edit' ? dishForm.dish : undefined}
-          onSaved={handleDishSaved}
-          onCancel={() => setDishForm(null)}
-        />
+        <Modal label={dishForm.mode === 'edit' ? 'Editar plato' : 'Nuevo plato'} onClose={() => setDishForm(null)}>
+          <DishForm
+            key={dishForm.mode === 'edit' ? dishForm.dish.id : 'new'}
+            categories={categories.data}
+            dish={dishForm.mode === 'edit' ? dishForm.dish : undefined}
+            onSaved={handleDishSaved}
+            onCancel={() => setDishForm(null)}
+          />
+        </Modal>
       )}
 
       {notice && (
