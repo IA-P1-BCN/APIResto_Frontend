@@ -73,6 +73,7 @@ Los datos simulados (carta, mesas, reservas y pedidos) siguen las mismas reglas 
 | Cocina | admin, kitchen | `GET /orders/`, `PATCH /orders/{id}/status`, `PATCH /orders/{id}/items/{item_id}`, `WS /ws/kitchen` |
 | Barra (HU-41) | admin, bartender | Los mismos que cocina |
 | Facturas (HU-14) | admin, waiter (exportar CSV: solo admin) | `GET /orders/?status=served`, `POST /orders/{id}/invoice`, `GET /invoices`, `GET /exports/invoices` |
+| Estadísticas (HU-15) | admin | `GET /stats/sales`, `GET /stats/top-dishes` (filtros `from`, `to` y `limit`) |
 
 Buscar mesas libres es solo para admin y waiter, así que el cliente ve y cancela sus reservas pero no crea reservas nuevas desde la web.
 
@@ -91,7 +92,7 @@ src/
 ├── components/   # Layout, rutas protegidas, paginación, formularios de reserva y pedido
 ├── context/      # AuthContext / AuthProvider / useAuth
 ├── hooks/        # useQuery (carga de datos), useKitchenFeed (cocina y barra en tiempo real)
-├── pages/        # Login, panel, carta, mesas, reservas, pedidos, cocina, barra, facturas, 403, 404
+├── pages/        # Login, panel, carta, mesas, reservas, pedidos, cocina, barra, facturas, estadísticas, 403, 404
 ├── routes/       # Navegación por rol (matriz de permisos del plan, 5.4)
 ├── utils/        # Formato de precios y fechas, textos de los estados
 └── test/         # Tests de Vitest

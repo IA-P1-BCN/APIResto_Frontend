@@ -129,6 +129,28 @@ export interface Invoice {
   issued_at: string
 }
 
+export interface SalesDay {
+  day: string
+  orders_count: number
+  total_sales: string
+}
+
+export interface SalesSummary {
+  date_from: string | null
+  date_to: string | null
+  orders_count: number
+  total_sales: string
+  average_ticket: string
+  daily: SalesDay[]
+}
+
+export interface TopDish {
+  dish_id: number
+  name: string
+  quantity: number
+  revenue: string
+}
+
 export interface KitchenEvent {
   event: 'order_created' | 'order_status_changed'
   order: Pick<Order, 'id' | 'status'> & Partial<Order>

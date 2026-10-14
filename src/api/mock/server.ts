@@ -19,7 +19,9 @@ import type {
   ReservationUpdate,
   Role,
   Station,
+  SalesSummary,
   TableStatus,
+  TopDish,
 } from '../types'
 import { db, DEFAULT_DURATION_MIN, endsAt } from './db'
 import { mockEvents } from './events'
@@ -91,6 +93,23 @@ function invoicesInRange({ date_from, date_to }: InvoiceFilters): Invoice[] {
 
 function checkDateRange({ date_from, date_to }: InvoiceFilters) {
   if (date_from && date_to && date_from > date_to) throw new Error('La fecha "desde" debe ser anterior a la fecha "hasta"')
+}
+
+export interface StatsFilters {
+  from?: string
+  to?: string
+}
+
+const SALE_STATUSES: OrderStatus[] = ['served', 'paid']
+const cents = (amount: number | string) => Math.round(Number(amount) * 100)
+const euros = (amountInCents: number) => (amountInCents / 100).toFixed(2)
+
+function sales({ from, to }: StatsFilters): Order[] {
+  if (from && to && from > to) throw new Error('La fecha "desde" debe ser anterior a la fecha "hasta"')
+  return db.orders.filter((o) => {
+    const day = o.created_at.slice(0, 10)
+    return SALE_STATUSES.includes(o.status) && (!from || day >= from) && (!to || day <= to)
+  })
 }
 
 function insertOrder(data: OrderCreate, waiterId: number): Order {
@@ -454,6 +473,50 @@ export const mockServer = {
       return [i.number, i.issued_at, i.order_id, tableId, i.base_amount, i.tax_rate, i.tax_amount, i.total].join(',')
     })
     return [header, ...rows].map((line) => `${line}\r\n`).join('')
+  },
+
+  async getSales(filters: StatsFilters = {}): Promise<SalesSummary> {
+    await delay()
+    currentUser('admin')
+    const orders = sales(filters)
+    const byDay = new Map<string, { orders_count: number; total: number }>()
+    for (const o of orders) {
+      const day = byDay.get(o.created_at.slice(0, 10)) ?? { orders_count: 0, total: 0 }
+      byDay.set(o.created_at.slice(0, 10), { orders_count: day.orders_count + 1, total: day.total + cents(o.total) })
+    }
+    const total = orders.reduce((sum, o) => sum + cents(o.total), 0)
+    return {
+      date_from: filters.from ?? null,
+      date_to: filters.to ?? null,
+      orders_count: orders.length,
+      total_sales: euros(total),
+      average_ticket: euros(orders.length ? Math.round(total / orders.length) : 0),
+      daily: [...byDay.entries()]
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([day, d]) => ({ day, orders_count: d.orders_count, total_sales: euros(d.total) })),
+    }
+  },
+
+  async getTopDishes(filters: StatsFilters & { limit?: number } = {}): Promise<TopDish[]> {
+    await delay()
+    currentUser('admin')
+    const totals = new Map<number, { quantity: number; revenue: number }>()
+    for (const item of sales(filters).flatMap((o) => o.items)) {
+      const dish = totals.get(item.dish_id) ?? { quantity: 0, revenue: 0 }
+      totals.set(item.dish_id, {
+        quantity: dish.quantity + item.quantity,
+        revenue: dish.revenue + item.quantity * cents(item.unit_price),
+      })
+    }
+    return [...totals.entries()]
+      .map(([dish_id, t]) => ({
+        dish_id,
+        name: db.dishes.find((d) => d.id === dish_id)?.name ?? `Plato ${dish_id}`,
+        quantity: t.quantity,
+        revenue: euros(t.revenue),
+      }))
+      .sort((a, b) => b.quantity - a.quantity || cents(b.revenue) - cents(a.revenue) || a.dish_id - b.dish_id)
+      .slice(0, filters.limit ?? 5)
   },
 
   async simulateWaiterOrder(station?: Station): Promise<Order> {
