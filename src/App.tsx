@@ -7,6 +7,7 @@ import WakeUpBanner from './components/WakeUpBanner'
 import { ConfirmProvider } from './context/ConfirmProvider'
 import BarPage from './pages/BarPage'
 import DashboardPage from './pages/DashboardPage'
+import InvoicesPage from './pages/InvoicesPage'
 import KitchenPage from './pages/KitchenPage'
 import LoginPage from './pages/LoginPage'
 import MenuPage from './pages/MenuPage'
@@ -24,6 +25,7 @@ const PAGES: Record<string, ComponentType> = {
   '/pedidos': OrdersPage,
   '/cocina': KitchenPage,
   '/barra': BarPage,
+  '/facturas': InvoicesPage,
 }
 
 export default function App() {

@@ -118,6 +118,17 @@ export interface OrderCreate {
   items: { dish_id: number; quantity: number; notes?: string }[]
 }
 
+export interface Invoice {
+  id: number
+  number: string
+  order_id: number
+  base_amount: string
+  tax_rate: string
+  tax_amount: string
+  total: string
+  issued_at: string
+}
+
 export interface KitchenEvent {
   event: 'order_created' | 'order_status_changed'
   order: Pick<Order, 'id' | 'status'> & Partial<Order>
