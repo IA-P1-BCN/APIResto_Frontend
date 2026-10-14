@@ -678,6 +678,15 @@ td.order-items-cell {
   min-width: 180px;
 }
 
+.quick-menu,
+.draft-lines {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.5rem;
+}
+
 .order-items {
   list-style: none;
   margin: 0;

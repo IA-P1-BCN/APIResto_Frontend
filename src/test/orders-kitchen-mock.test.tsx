@@ -2,6 +2,7 @@ import { screen, waitFor, within } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { db } from '../api/mock/db'
 import { mockServer } from '../api/mock/server'
+import { answerConfirm } from './confirmDialog'
 import { renderApp } from './renderApp'
 
 vi.mock('../config', () => ({ USE_MOCK: true, API_URL: 'http://api.test' }))
@@ -31,6 +32,7 @@ describe('Pedidos (sala)', () => {
     await user.selectOptions(within(form).getByLabelText('Mesa'), 'Mesa 1 · Interior')
     await user.click(await within(form).findByRole('button', { name: 'Añadir Croquetas de jamón' }))
     await user.click(within(form).getByRole('button', { name: 'Añadir Croquetas de jamón' }))
+    await answerConfirm(user, 'Añadir otro')
     await user.click(within(form).getByRole('button', { name: 'Añadir Café' }))
     await user.type(within(form).getByLabelText('Notas de Croquetas de jamón'), 'Sin sal')
 
@@ -62,6 +64,25 @@ describe('Pedidos (sala)', () => {
     await user.click(within(form).getByRole('button', { name: 'Quitar uno de Café' }))
     expect(within(form).getByText('Añade platos desde la carta.')).toBeInTheDocument()
     expect(within(form).getByRole('button', { name: 'Enviar a cocina' })).toBeDisabled()
+  })
+
+  it('avisa al añadir otra vez un plato que ya está en la comanda', async () => {
+    loginAs('waiter')
+    const { user } = renderApp('/pedidos')
+    await user.click(await screen.findByRole('button', { name: '+ Nuevo pedido' }))
+    const form = screen.getByRole('form', { name: 'Nuevo pedido' })
+    await user.click(await within(form).findByRole('button', { name: 'Añadir Café' }))
+    await user.click(within(form).getByRole('button', { name: 'Añadir Café' }))
+
+    const dialog = await screen.findByRole('alertdialog')
+    expect(dialog).toHaveTextContent('Café ya está en la comanda')
+    expect(dialog).toHaveTextContent('Lleva 1. ¿Quieres añadir otro?')
+    await answerConfirm(user, 'No añadir')
+    expect(within(form).getByLabelText('Cantidad de Café')).toHaveTextContent('1')
+
+    await user.click(within(form).getByRole('button', { name: 'Añadir otro de Café' }))
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
+    expect(within(form).getByLabelText('Cantidad de Café')).toHaveTextContent('2')
   })
 
   it('la carta del pedido no ofrece platos agotados ni mesas fuera de servicio', async () => {

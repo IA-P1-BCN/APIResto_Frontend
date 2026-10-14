@@ -4,6 +4,7 @@ import { listAllDishes, listCategories } from '../api/menu'
 import { createOrder } from '../api/orders'
 import { listTables } from '../api/tables'
 import type { Dish, Order } from '../api/types'
+import { useConfirm } from '../context/useConfirm'
 import { useQuery } from '../hooks/useQuery'
 import { formatPrice } from '../utils/format'
 import { TABLE_LOCATION_LABEL } from '../utils/labels'
@@ -25,6 +26,7 @@ export default function NewOrderForm({ onCreated, onCancel }: Props) {
   const tables = useQuery(listTables)
   const categories = useQuery(listCategories)
   const dishes = useQuery(fetchAvailableDishes)
+  const confirm = useConfirm()
 
   const [tableId, setTableId] = useState<number | null>(null)
   const [lines, setLines] = useState<Line[]>([])
@@ -43,7 +45,17 @@ export default function NewOrderForm({ onCreated, onCancel }: Props) {
   )
   const total = lines.reduce((t, l) => t + l.quantity * Number(l.dish.price), 0)
 
-  function add(dish: Dish) {
+  async function add(dish: Dish) {
+    const existing = lines.find((l) => l.dish.id === dish.id)
+    if (existing) {
+      const confirmed = await confirm({
+        title: `${dish.name} ya está en la comanda`,
+        message: `Lleva ${existing.quantity}. ¿Quieres añadir otro?`,
+        confirmLabel: 'Añadir otro',
+        cancelLabel: 'No añadir',
+      })
+      if (!confirmed) return
+    }
     setLines((ls) => {
       const existing = ls.find((l) => l.dish.id === dish.id)
       if (existing) return ls.map((l) => (l === existing ? { ...l, quantity: l.quantity + 1 } : l))
@@ -115,7 +127,7 @@ export default function NewOrderForm({ onCreated, onCancel }: Props) {
                     <button
                       type="button"
                       className="btn btn-secondary btn-dish"
-                      onClick={() => add(d)}
+                      onClick={() => void add(d)}
                       aria-label={`Añadir ${d.name}`}
                     >
                       <span>{d.name}</span>
