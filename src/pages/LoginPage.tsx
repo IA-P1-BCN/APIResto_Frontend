@@ -35,7 +35,7 @@ export default function LoginPage() {
     <div className="login-page">
       <ThemeToggle />
       <form className="card login-card" onSubmit={handleSubmit}>
-        <h1>🍽️ RestoAPI</h1>
+        <h1>🍽️ APIResto</h1>
         <p className="muted">Inicia sesión para continuar</p>
 
         <label>
