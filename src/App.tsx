@@ -8,6 +8,7 @@ import { ConfirmProvider } from './context/ConfirmProvider'
 import BarPage from './pages/BarPage'
 import DashboardPage from './pages/DashboardPage'
 import InvoicesPage from './pages/InvoicesPage'
+import StatsPage from './pages/StatsPage'
 import KitchenPage from './pages/KitchenPage'
 import LoginPage from './pages/LoginPage'
 import MenuPage from './pages/MenuPage'
@@ -26,6 +27,7 @@ const PAGES: Record<string, ComponentType> = {
   '/cocina': KitchenPage,
   '/barra': BarPage,
   '/facturas': InvoicesPage,
+  '/estadisticas': StatsPage,
 }
 
 export default function App() {

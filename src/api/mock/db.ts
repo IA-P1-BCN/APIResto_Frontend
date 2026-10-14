@@ -125,6 +125,48 @@ function initialOrders(): Order[] {
   ]
 }
 
+const DAY_MS = 24 * 60 * 60 * 1000
+const SOLD_DISH_IDS = [1, 2, 3, 6, 7, 8, 9, 11, 12, 13, 14, 15, 16]
+
+function pastOrders(): Order[] {
+  let seed = 7
+  const random = () => (seed = (seed * 9301 + 49297) % 233280) / 233280
+  const pick = <T,>(list: T[]) => list[Math.floor(random() * list.length)]
+  const sold = DISHES.filter((d) => SOLD_DISH_IDS.includes(d.id))
+  const orders: Order[] = []
+  let itemId = 1001
+  for (let daysAgo = 13; daysAgo >= 1; daysAgo--) {
+    const count = 2 + Math.floor(random() * 4)
+    for (let n = 0; n < count; n++) {
+      const createdAt = new Date(Date.now() - daysAgo * DAY_MS)
+      createdAt.setUTCHours(11 + Math.floor(random() * 10), Math.floor(random() * 60), 0, 0)
+      const items: OrderItem[] = Array.from({ length: 1 + Math.floor(random() * 3) }, () => {
+        const dish = pick(sold)
+        return {
+          id: itemId++,
+          dish_id: dish.id,
+          quantity: 1 + Math.floor(random() * 2),
+          unit_price: dish.price,
+          notes: null,
+          prepared: true,
+          served: true,
+        }
+      })
+      orders.push({
+        id: 1000 + orders.length + 1,
+        table_id: pick(TABLES).id,
+        waiter_id: 2,
+        status: 'paid',
+        total: items.reduce((t, i) => t + i.quantity * Number(i.unit_price), 0).toFixed(2),
+        created_at: toServerTimestamp(createdAt),
+        updated_at: toServerTimestamp(createdAt),
+        items,
+      })
+    }
+  }
+  return orders
+}
+
 interface MockDb {
   categories: Category[]
   dishes: Dish[]
@@ -139,17 +181,17 @@ interface MockDb {
 
 function createDb(): MockDb {
   const reservations = initialReservations()
-  const orders = initialOrders()
+  const current = initialOrders()
   return {
     categories: structuredClone(CATEGORIES),
     dishes: structuredClone(DISHES),
     tables: structuredClone(TABLES),
     reservations,
-    orders,
+    orders: [...pastOrders(), ...current],
     invoices: [],
     nextReservationId: reservations.length + 1,
-    nextOrderId: orders.length + 1,
-    nextOrderItemId: orders.flatMap((o) => o.items).length + 1,
+    nextOrderId: current.length + 1,
+    nextOrderItemId: current.flatMap((o) => o.items).length + 1,
   }
 }
 
