@@ -1,6 +1,6 @@
 # 🍽️ RestoAPI — Frontend
 
-Interfaz web de RestoAPI: login, panel por rol, carta, mesas, reservas, pedidos y pantalla de cocina en tiempo real.
+Interfaz web de RestoAPI: login, panel por rol, carta, mesas, reservas, pedidos y pantallas de cocina y barra en tiempo real.
 
 > 🌐 **App en producción:** [resto-api-f5.vercel.app](https://resto-api-f5.vercel.app) · API: [restoapi-47sp.onrender.com](https://restoapi-47sp.onrender.com) ([Swagger](https://restoapi-47sp.onrender.com/docs))
 
@@ -60,7 +60,7 @@ Con `VITE_USE_MOCK=true` en el `.env`, el login funciona con usuarios de prueba 
 
 En la pantalla de login hay un botón por rol que rellena las credenciales. **En Vercel debe ser `false`.**
 
-Los datos simulados (carta, mesas, reservas y pedidos) siguen las mismas reglas que la API y se reinician al recargar la página. En la vista **Cocina**, el botón *Simular pedido de sala* crea un pedido que aparece al instante, como si llegara por el WebSocket.
+Los datos simulados (carta, mesas, reservas y pedidos) siguen las mismas reglas que la API y se reinician al recargar la página. En las vistas **Cocina** y **Barra**, el botón *Simular pedido de sala* crea un pedido que aparece al instante, como si llegara por el WebSocket.
 
 ### Vistas (HU-13)
 
@@ -70,13 +70,16 @@ Los datos simulados (carta, mesas, reservas y pedidos) siguen las mismas reglas 
 | Mesas | admin, waiter | `GET /tables`, `PATCH /tables/{id}/status` |
 | Reservas | admin, waiter, customer (solo las suyas) | `GET/POST /reservations`, `PATCH /reservations/{id}/cancel`, `GET /tables/available` |
 | Pedidos | admin, waiter | `GET/POST /orders/`, `PATCH /orders/{id}/status` |
-| Cocina | admin, kitchen | `GET /orders/`, `PATCH /orders/{id}/status`, `WS /ws/kitchen` |
+| Cocina | admin, kitchen | `GET /orders/`, `PATCH /orders/{id}/status`, `PATCH /orders/{id}/items/{item_id}`, `WS /ws/kitchen` |
+| Barra (HU-41) | admin, bartender | Los mismos que cocina |
 
 Buscar mesas libres es solo para admin y waiter, así que el cliente ve y cancela sus reservas pero no crea reservas nuevas desde la web.
 
-### Tiempo real (cocina)
+### Tiempo real (cocina y barra)
 
 La vista de cocina se conecta a `ws(s)://<API>/ws/kitchen?token=<JWT>` y escucha los eventos `order_created` y `order_status_changed` (`{"event": ..., "order": {...}}`). Como el pedido del evento llega incompleto (sin hora ni notas), cada evento recarga la lista con `GET /orders/`; los cambios de estado se aplican además al momento. Si la conexión se cae, reintenta con espera creciente (1 s, 2 s, 4 s… hasta 30 s) y, mientras tanto, consulta `GET /orders/` cada 10 s.
+
+Cada plato va a cocina o a barra según el campo `station` de su categoría (`kitchen` o `bar`), que el admin elige en *Gestionar categorías*; por defecto, cocina. En el modo simulado, Postres y Bebidas son de barra. Cada pantalla solo muestra sus platos. El estado de un pedido lo lleva cocina, salvo que solo tenga platos de barra.
 
 ### Estructura
 
@@ -86,8 +89,8 @@ src/
 │   └── mock/     # Modo simulado: datos de prueba (db.ts) y reglas de la API (server.ts)
 ├── components/   # Layout, rutas protegidas, paginación, formularios de reserva y pedido
 ├── context/      # AuthContext / AuthProvider / useAuth
-├── hooks/        # useQuery (carga de datos), useKitchenFeed (cocina en tiempo real)
-├── pages/        # Login, panel, carta, mesas, reservas, pedidos, cocina, 403, 404
+├── hooks/        # useQuery (carga de datos), useKitchenFeed (cocina y barra en tiempo real)
+├── pages/        # Login, panel, carta, mesas, reservas, pedidos, cocina, barra, 403, 404
 ├── routes/       # Navegación por rol (matriz de permisos del plan, 5.4)
 ├── utils/        # Formato de precios y fechas, textos de los estados
 └── test/         # Tests de Vitest

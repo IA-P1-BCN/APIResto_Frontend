@@ -1,6 +1,7 @@
 import { toServerTimestamp } from '../../utils/format'
 import { mockUserFromToken } from '../mockAuth'
 import { VALID_TRANSITIONS } from '../orderRules'
+import { DEFAULT_STATION } from '../stations'
 import { tokenStorage } from '../tokenStorage'
 import type {
   Category,
@@ -16,6 +17,7 @@ import type {
   ReservationCreate,
   ReservationUpdate,
   Role,
+  Station,
   TableStatus,
 } from '../types'
 import { db, DEFAULT_DURATION_MIN, endsAt } from './db'
@@ -354,9 +356,11 @@ export const mockServer = {
 
   async updateOrderItem(orderId: number, itemId: number, marks: OrderItemMarks): Promise<Order> {
     await delay()
-    const user = currentUser('admin', 'waiter', 'kitchen')
+    const user = currentUser('admin', 'waiter', 'kitchen', 'bartender')
     if (marks.prepared !== undefined && user.role === 'waiter') throw new Error('No tienes permiso para esta acción')
-    if (marks.served !== undefined && user.role === 'kitchen') throw new Error('No tienes permiso para esta acción')
+    if (marks.served !== undefined && (user.role === 'kitchen' || user.role === 'bartender')) {
+      throw new Error('No tienes permiso para esta acción')
+    }
     const order = db.orders.find((o) => o.id === orderId)
     if (!order) throw new Error('Pedido no encontrado')
     const item = order.items.find((i) => i.id === itemId)
@@ -387,9 +391,10 @@ export const mockServer = {
     return structuredClone(order)
   },
 
-  async simulateWaiterOrder(): Promise<Order> {
+  async simulateWaiterOrder(station?: Station): Promise<Order> {
     await delay(100)
-    const available = db.dishes.filter((d) => d.is_available)
+    const stationOf = (categoryId: number) => db.categories.find((c) => c.id === categoryId)?.station ?? DEFAULT_STATION
+    const available = db.dishes.filter((d) => d.is_available && (!station || stationOf(d.category_id) === station))
     const tables = db.tables.filter((t) => t.status !== 'out_of_service')
     const pick = <T,>(list: T[]) => list[Math.floor(Math.random() * list.length)]
     const items = Array.from({ length: 1 + Math.floor(Math.random() * 3) }, () => ({

@@ -20,6 +20,7 @@ describe('login y navegación por rol (modo simulado)', () => {
     ['admin@restoapi.dev', 'Hola, Admin Demo'],
     ['camarero@restoapi.dev', 'Pedidos'],
     ['cocina@restoapi.dev', 'Cocina'],
+    ['barra@restoapi.dev', 'Barra'],
     ['cliente@restoapi.dev', 'Carta'],
   ])('al iniciar sesión, %s entra en su pantalla (%s)', async (email, heading) => {
     const { user } = renderApp('/login')
@@ -67,11 +68,12 @@ describe('login y navegación por rol (modo simulado)', () => {
     expect(screen.queryByRole('link', { name: 'Pedidos' })).not.toBeInTheDocument()
   })
 
-  it('barra entra en Inicio, ve la carta y no las vistas de otros roles', async () => {
+  it('barra ve su pantalla y la carta, y no las vistas de otros roles', async () => {
     const { user } = renderApp('/login')
     await loginAs(user, 'barra@restoapi.dev')
-    expect(await screen.findByRole('heading', { name: 'Hola, Barra Demo' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { level: 1, name: 'Barra' })).toBeInTheDocument()
     expect(screen.getByText('Barra', { selector: '.badge' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Barra' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Carta' })).toBeInTheDocument()
     for (const name of ['Mesas', 'Pedidos', 'Cocina', 'Usuarios']) {
       expect(screen.queryByRole('link', { name })).not.toBeInTheDocument()

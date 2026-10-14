@@ -5,6 +5,7 @@ import Layout from './components/Layout'
 import { RequireAuth, RequireRole } from './components/ProtectedRoute'
 import WakeUpBanner from './components/WakeUpBanner'
 import { ConfirmProvider } from './context/ConfirmProvider'
+import BarPage from './pages/BarPage'
 import DashboardPage from './pages/DashboardPage'
 import KitchenPage from './pages/KitchenPage'
 import LoginPage from './pages/LoginPage'
@@ -22,6 +23,7 @@ const PAGES: Record<string, ComponentType> = {
   '/reservas': ReservationsPage,
   '/pedidos': OrdersPage,
   '/cocina': KitchenPage,
+  '/barra': BarPage,
 }
 
 export default function App() {

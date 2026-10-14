@@ -2,10 +2,10 @@ import { toISODate, toServerTimestamp } from '../../utils/format'
 import type { Category, DiningTable, Dish, Order, OrderItem, Reservation } from '../types'
 
 const CATEGORIES: Category[] = [
-  { id: 1, name: 'Entrantes', sort_order: 1 },
-  { id: 2, name: 'Principales', sort_order: 2 },
-  { id: 3, name: 'Postres', sort_order: 3 },
-  { id: 4, name: 'Bebidas', sort_order: 4 },
+  { id: 1, name: 'Entrantes', sort_order: 1, station: 'kitchen' },
+  { id: 2, name: 'Principales', sort_order: 2, station: 'kitchen' },
+  { id: 3, name: 'Postres', sort_order: 3, station: 'bar' },
+  { id: 4, name: 'Bebidas', sort_order: 4, station: 'bar' },
 ]
 
 const dish = (

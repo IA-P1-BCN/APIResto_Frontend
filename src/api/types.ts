@@ -27,10 +27,13 @@ export interface Page<T> {
   size: number
 }
 
+export type Station = 'kitchen' | 'bar'
+
 export interface Category {
   id: number
   name: string
   sort_order: number
+  station?: Station
 }
 
 export interface Dish {

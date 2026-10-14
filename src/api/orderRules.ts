@@ -16,10 +16,10 @@ export interface Transition {
 
 export const TRANSITIONS: Record<OrderStatus, Transition[]> = {
   pending: [
-    { to: 'in_kitchen', roles: ['admin', 'kitchen'], action: 'Empezar' },
+    { to: 'in_kitchen', roles: ['admin', 'kitchen', 'bartender'], action: 'Empezar' },
     { to: 'cancelled', roles: ['admin', 'waiter'], action: 'Cancelar' },
   ],
-  in_kitchen: [{ to: 'served', roles: ['admin', 'kitchen'], action: 'Marcar servido' }],
+  in_kitchen: [{ to: 'served', roles: ['admin', 'kitchen', 'bartender'], action: 'Marcar servido' }],
   served: [{ to: 'paid', roles: ['admin', 'waiter'], action: 'Marcar pagado' }],
   paid: [],
   cancelled: [],
