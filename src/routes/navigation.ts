@@ -25,7 +25,7 @@ export const NAV_ITEMS: NavItem[] = [
   { path: '/pedidos', label: 'Pedidos', roles: ['admin', 'waiter'], description: 'Comandas por mesa', hu: 'HU-13' },
   { path: '/cocina', label: 'Cocina', roles: ['admin', 'kitchen'], description: 'Pedidos en tiempo real para cocina', hu: 'HU-13' },
   { path: '/barra', label: 'Barra', roles: ['admin', 'bartender'], description: 'Bebidas y postres en tiempo real', hu: 'HU-41' },
-  { path: '/facturas', label: 'Facturas', roles: ['admin', 'waiter'], description: 'Facturas y exportación CSV' },
+  { path: '/facturas', label: 'Facturas', roles: ['admin', 'waiter'], description: 'Facturas y exportación CSV', hu: 'HU-14' },
   { path: '/estadisticas', label: 'Estadísticas', roles: ['admin'], description: 'Ventas y platos más vendidos' },
   { path: '/usuarios', label: 'Usuarios', roles: ['admin'], description: 'Personal y clientes' },
 ]

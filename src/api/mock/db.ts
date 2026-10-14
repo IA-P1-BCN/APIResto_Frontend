@@ -1,5 +1,5 @@
 import { toISODate, toServerTimestamp } from '../../utils/format'
-import type { Category, DiningTable, Dish, Order, OrderItem, Reservation } from '../types'
+import type { Category, DiningTable, Dish, Invoice, Order, OrderItem, Reservation } from '../types'
 
 const CATEGORIES: Category[] = [
   { id: 1, name: 'Entrantes', sort_order: 1, station: 'kitchen' },
@@ -131,6 +131,7 @@ interface MockDb {
   tables: DiningTable[]
   reservations: Reservation[]
   orders: Order[]
+  invoices: Invoice[]
   nextReservationId: number
   nextOrderId: number
   nextOrderItemId: number
@@ -145,6 +146,7 @@ function createDb(): MockDb {
     tables: structuredClone(TABLES),
     reservations,
     orders,
+    invoices: [],
     nextReservationId: reservations.length + 1,
     nextOrderId: orders.length + 1,
     nextOrderItemId: orders.flatMap((o) => o.items).length + 1,

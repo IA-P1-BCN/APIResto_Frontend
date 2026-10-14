@@ -7,6 +7,7 @@ import type {
   Category,
   DiningTable,
   Dish,
+  Invoice,
   Order,
   OrderCreate,
   OrderItem,
@@ -72,6 +73,24 @@ export interface ReservationFilters {
 export interface OrderFilters {
   statuses?: OrderStatus[]
   table_id?: number
+}
+
+export interface InvoiceFilters {
+  date_from?: string
+  date_to?: string
+  page?: number
+  size?: number
+}
+
+const TAX_RATE = 0.1
+
+function invoicesInRange({ date_from, date_to }: InvoiceFilters): Invoice[] {
+  const inRange = (day: string) => (!date_from || day >= date_from) && (!date_to || day <= date_to)
+  return db.invoices.filter((i) => inRange(i.issued_at.slice(0, 10))).sort((a, b) => a.number.localeCompare(b.number))
+}
+
+function checkDateRange({ date_from, date_to }: InvoiceFilters) {
+  if (date_from && date_to && date_from > date_to) throw new Error('La fecha "desde" debe ser anterior a la fecha "hasta"')
 }
 
 function insertOrder(data: OrderCreate, waiterId: number): Order {
@@ -389,6 +408,52 @@ export const mockServer = {
       })
     }
     return structuredClone(order)
+  },
+
+  async listInvoices(filters: InvoiceFilters = {}): Promise<Page<Invoice>> {
+    await delay()
+    currentUser('admin', 'waiter')
+    checkDateRange(filters)
+    return paginate(structuredClone(invoicesInRange(filters)), filters.page ?? 1, filters.size ?? 20)
+  },
+
+  async createInvoice(orderId: number): Promise<Invoice> {
+    await delay()
+    currentUser('admin', 'waiter')
+    const order = db.orders.find((o) => o.id === orderId)
+    if (!order) throw new Error('Pedido no encontrado')
+    if (order.status !== 'served') throw new Error('Solo se pueden facturar pedidos servidos')
+    const existing = db.invoices.find((i) => i.order_id === orderId)
+    if (existing) throw new Error(`El pedido #${orderId} ya tiene la factura ${existing.number}`)
+    const issuedAt = toServerTimestamp(new Date())
+    const year = issuedAt.slice(0, 4)
+    const sequence = db.invoices.filter((i) => i.number.startsWith(`F-${year}-`)).length + 1
+    const totalCents = Math.round(Number(order.total) * 100)
+    const baseCents = Math.round(totalCents / (1 + TAX_RATE))
+    const invoice: Invoice = {
+      id: nextId(db.invoices),
+      number: `F-${year}-${String(sequence).padStart(5, '0')}`,
+      order_id: orderId,
+      base_amount: (baseCents / 100).toFixed(2),
+      tax_rate: TAX_RATE.toFixed(2),
+      tax_amount: ((totalCents - baseCents) / 100).toFixed(2),
+      total: (totalCents / 100).toFixed(2),
+      issued_at: issuedAt,
+    }
+    db.invoices.push(invoice)
+    return structuredClone(invoice)
+  },
+
+  async exportInvoicesCsv(filters: Pick<InvoiceFilters, 'date_from' | 'date_to'> = {}): Promise<string> {
+    await delay()
+    currentUser('admin')
+    checkDateRange(filters)
+    const header = 'number,issued_at,order_id,table_id,base_amount,tax_rate,tax_amount,total'
+    const rows = invoicesInRange(filters).map((i) => {
+      const tableId = db.orders.find((o) => o.id === i.order_id)?.table_id ?? ''
+      return [i.number, i.issued_at, i.order_id, tableId, i.base_amount, i.tax_rate, i.tax_amount, i.total].join(',')
+    })
+    return [header, ...rows].map((line) => `${line}\r\n`).join('')
   },
 
   async simulateWaiterOrder(station?: Station): Promise<Order> {
