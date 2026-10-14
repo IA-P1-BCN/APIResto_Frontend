@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { Navigate } from 'react-router-dom'
 import { getErrorMessage, isUnauthorized } from '../api/errors'
 import { MOCK_PASSWORD, MOCK_USERS } from '../api/mockAuth'
+import ThemeToggle from '../components/ThemeToggle'
 import { USE_MOCK } from '../config'
 import { useAuth } from '../context/useAuth'
 import { homeFor, ROLE_LABEL } from '../routes/navigation'
@@ -32,6 +33,7 @@ export default function LoginPage() {
 
   return (
     <div className="login-page">
+      <ThemeToggle />
       <form className="card login-card" onSubmit={handleSubmit}>
         <h1>🍽️ RestoAPI</h1>
         <p className="muted">Inicia sesión para continuar</p>
