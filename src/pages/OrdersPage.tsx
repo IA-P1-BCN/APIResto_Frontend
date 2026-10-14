@@ -4,6 +4,7 @@ import { ACTIVE_STATUSES, transitionsFor } from '../api/orderRules'
 import { listOrders, updateOrderItem, updateOrderStatus } from '../api/orders'
 import type { Order, OrderItem, OrderStatus } from '../api/types'
 import ErrorMessage from '../components/ErrorMessage'
+import Modal from '../components/Modal'
 import NewOrderForm from '../components/NewOrderForm'
 import { useAuth } from '../context/useAuth'
 import { useConfirm } from '../context/useConfirm'
@@ -107,7 +108,11 @@ export default function OrdersPage() {
         )}
       </div>
 
-      {formOpen && <NewOrderForm onCreated={handleCreated} onCancel={() => setFormOpen(false)} />}
+      {formOpen && (
+        <Modal label="Nuevo pedido" onClose={() => setFormOpen(false)}>
+          <NewOrderForm onCreated={handleCreated} onCancel={() => setFormOpen(false)} />
+        </Modal>
+      )}
 
       {notice && (
         <div className="banner banner-success" role="status">
