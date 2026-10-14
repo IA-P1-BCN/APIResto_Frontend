@@ -53,6 +53,7 @@ Con `VITE_USE_MOCK=true` en el `.env`, el login funciona con usuarios de prueba 
 | Administración | `admin@restoapi.dev` | `demo1234` |
 | Sala (camarero) | `camarero@restoapi.dev` | `demo1234` |
 | Cocina | `cocina@restoapi.dev` | `demo1234` |
+| Barra | `barra@restoapi.dev` | `demo1234` |
 | Cliente | `cliente@restoapi.dev` | `demo1234` |
 
 En la pantalla de login hay un botón por rol que rellena las credenciales. **En Vercel debe ser `false`.**
@@ -63,7 +64,7 @@ Los datos simulados (carta, mesas, reservas y pedidos) siguen las mismas reglas 
 
 | Vista | Roles | Endpoints |
 |---|---|---|
-| Carta | todos | `GET /categories/`, `GET /dishes/` (filtros y paginación) |
+| Carta | todos (también bartender) | `GET /categories/`, `GET /dishes/` (filtros y paginación) |
 | Mesas | admin, waiter | `GET /tables`, `PATCH /tables/{id}/status` |
 | Reservas | admin, waiter, customer (solo las suyas) | `GET/POST /reservations`, `PATCH /reservations/{id}/cancel`, `GET /tables/available` |
 | Pedidos | admin, waiter | `GET/POST /orders/`, `PATCH /orders/{id}/status` |

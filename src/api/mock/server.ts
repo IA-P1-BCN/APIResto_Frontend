@@ -335,7 +335,7 @@ export const mockServer = {
 
   async listOrders({ statuses, table_id }: OrderFilters = {}): Promise<Order[]> {
     await delay()
-    currentUser('admin', 'waiter', 'kitchen')
+    currentUser('admin', 'waiter', 'kitchen', 'bartender')
     const items = db.orders
       .filter((o) => !statuses || statuses.includes(o.status))
       .filter((o) => table_id === undefined || o.table_id === table_id)
@@ -351,7 +351,7 @@ export const mockServer = {
 
   async updateOrderStatus(id: number, status: OrderStatus): Promise<Order> {
     await delay()
-    currentUser('admin', 'waiter', 'kitchen')
+    currentUser('admin', 'waiter', 'kitchen', 'bartender')
     const order = db.orders.find((o) => o.id === id)
     if (!order) throw new Error('Pedido no encontrado')
     if (order.status !== status) {

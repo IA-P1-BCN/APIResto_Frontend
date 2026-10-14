@@ -6,6 +6,7 @@ export const MOCK_USERS: User[] = [
   { id: 1, name: 'Admin Demo', email: 'admin@restoapi.dev', role: 'admin', is_active: true },
   { id: 2, name: 'Camarero Demo', email: 'camarero@restoapi.dev', role: 'waiter', is_active: true },
   { id: 3, name: 'Cocina Demo', email: 'cocina@restoapi.dev', role: 'kitchen', is_active: true },
+  { id: 5, name: 'Barra Demo', email: 'barra@restoapi.dev', role: 'bartender', is_active: true },
   { id: 4, name: 'Cliente Demo', email: 'cliente@restoapi.dev', role: 'customer', is_active: true },
 ]
 
