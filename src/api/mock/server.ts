@@ -9,6 +9,7 @@ import type {
   Order,
   OrderCreate,
   OrderItem,
+  OrderItemMarks,
   OrderStatus,
   Page,
   Reservation,
@@ -85,6 +86,8 @@ function insertOrder(data: OrderCreate, waiterId: number): Order {
       quantity: i.quantity,
       unit_price: dish.price,
       notes: i.notes?.trim() || null,
+      prepared: false,
+      served: false,
     }
   })
   const order: Order = {
@@ -347,6 +350,22 @@ export const mockServer = {
     await delay()
     const user = currentUser('admin', 'waiter')
     return insertOrder(data, user.id)
+  },
+
+  async updateOrderItem(orderId: number, itemId: number, marks: OrderItemMarks): Promise<Order> {
+    await delay()
+    const user = currentUser('admin', 'waiter', 'kitchen')
+    if (marks.prepared !== undefined && user.role === 'waiter') throw new Error('No tienes permiso para esta acción')
+    if (marks.served !== undefined && user.role === 'kitchen') throw new Error('No tienes permiso para esta acción')
+    const order = db.orders.find((o) => o.id === orderId)
+    if (!order) throw new Error('Pedido no encontrado')
+    const item = order.items.find((i) => i.id === itemId)
+    if (!item) throw new Error('Línea de pedido no encontrada')
+    if (order.status === 'paid' || order.status === 'cancelled') {
+      throw new Error('No se pueden cambiar las líneas de un pedido pagado o cancelado')
+    }
+    Object.assign(item, marks)
+    return structuredClone(order)
   },
 
   async updateOrderStatus(id: number, status: OrderStatus): Promise<Order> {

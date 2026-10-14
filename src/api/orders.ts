@@ -1,7 +1,7 @@
 import { USE_MOCK } from '../config'
 import { api } from './client'
 import { mockServer, type OrderFilters } from './mock/server'
-import type { Order, OrderCreate, OrderStatus } from './types'
+import type { Order, OrderCreate, OrderItemMarks, OrderStatus } from './types'
 
 export type { OrderFilters }
 
@@ -24,5 +24,11 @@ export async function createOrder(order: OrderCreate): Promise<Order> {
 export async function updateOrderStatus(id: number, status: OrderStatus): Promise<Order> {
   if (USE_MOCK) return mockServer.updateOrderStatus(id, status)
   const { data } = await api.patch<Order>(`/orders/${id}/status`, { status })
+  return data
+}
+
+export async function updateOrderItem(orderId: number, itemId: number, marks: OrderItemMarks): Promise<Order> {
+  if (USE_MOCK) return mockServer.updateOrderItem(orderId, itemId, marks)
+  const { data } = await api.patch<Order>(`/orders/${orderId}/items/${itemId}`, marks)
   return data
 }
