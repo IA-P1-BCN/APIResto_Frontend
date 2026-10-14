@@ -2,6 +2,8 @@
 
 Interfaz web de RestoAPI: login, panel por rol, carta, mesas, reservas, pedidos y pantalla de cocina en tiempo real.
 
+> 🌐 **App en producción:** [resto-api-f5.vercel.app](https://resto-api-f5.vercel.app) · API: [restoapi-47sp.onrender.com](https://restoapi-47sp.onrender.com) ([Swagger](https://restoapi-47sp.onrender.com/docs))
+
 > Backend: [IA-P1-BCN/Resto-API_Backend](https://github.com/IA-P1-BCN/Resto-API_Backend) · Despliegue: [guía de deploy](https://github.com/IA-P1-BCN/Resto-API_Backend/blob/dev/docs/deploy.md) (solo Anna despliega)
 
 ## Stack
