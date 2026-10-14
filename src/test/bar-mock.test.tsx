@@ -2,6 +2,7 @@ import { screen, waitFor, within } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { db } from '../api/mock/db'
 import { mockServer } from '../api/mock/server'
+import { lineText } from './orderLines'
 import { renderApp } from './renderApp'
 
 vi.mock('../config', () => ({ USE_MOCK: true, API_URL: 'http://api.test' }))
@@ -16,7 +17,7 @@ async function orderLines(id: number) {
   const list = await screen.findByRole('list', { name: `Platos del pedido ${id}` })
   return within(list)
     .getAllByRole('listitem')
-    .map((li) => li.textContent)
+    .map(lineText)
 }
 
 describe('Barra en tiempo real (HU-41)', () => {
@@ -43,9 +44,12 @@ describe('Barra en tiempo real (HU-41)', () => {
     loginAs('bartender')
     const { user } = renderApp('/barra')
     const order2 = await screen.findByRole('article', { name: 'Pedido 2' })
-    await user.click(await within(order2).findByRole('checkbox', { name: '2× Agua mineral' }))
-    await waitFor(() => expect(within(order2).getByText('1 de 1 preparados')).toBeInTheDocument())
-    expect(db.orders.find((o) => o.id === 2)!.items[2].prepared).toBe(true)
+    const more = await within(order2).findByRole('button', { name: 'Una preparada más de Agua mineral' })
+    await user.click(more)
+    await waitFor(() => expect(within(order2).getByText('1 de 2 preparados')).toBeInTheDocument())
+    await user.click(more)
+    await waitFor(() => expect(within(order2).getByText('2 de 2 preparados')).toBeInTheDocument())
+    expect(db.orders.find((o) => o.id === 2)!.items[2]).toMatchObject({ prepared_quantity: 2, prepared: true })
   })
 
   it('en un pedido con platos de cocina, el estado lo lleva cocina', async () => {

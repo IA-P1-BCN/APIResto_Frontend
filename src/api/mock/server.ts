@@ -126,6 +126,8 @@ function insertOrder(data: OrderCreate, waiterId: number): Order {
       quantity: i.quantity,
       unit_price: dish.price,
       notes: i.notes?.trim() || null,
+      prepared_quantity: 0,
+      served_quantity: 0,
       prepared: false,
       served: false,
     }
@@ -395,8 +397,10 @@ export const mockServer = {
   async updateOrderItem(orderId: number, itemId: number, marks: OrderItemMarks): Promise<Order> {
     await delay()
     const user = currentUser('admin', 'waiter', 'kitchen', 'bartender')
-    if (marks.prepared !== undefined && user.role === 'waiter') throw new Error('No tienes permiso para esta acción')
-    if (marks.served !== undefined && (user.role === 'kitchen' || user.role === 'bartender')) {
+    const marksPrepared = marks.prepared !== undefined || marks.prepared_quantity !== undefined
+    const marksServed = marks.served !== undefined || marks.served_quantity !== undefined
+    if (marksPrepared && user.role === 'waiter') throw new Error('No tienes permiso para esta acción')
+    if (marksServed && (user.role === 'kitchen' || user.role === 'bartender')) {
       throw new Error('No tienes permiso para esta acción')
     }
     const order = db.orders.find((o) => o.id === orderId)
@@ -406,7 +410,14 @@ export const mockServer = {
     if (order.status === 'paid' || order.status === 'cancelled') {
       throw new Error('No se pueden cambiar las líneas de un pedido pagado o cancelado')
     }
-    Object.assign(item, marks)
+    for (const field of ['prepared', 'served'] as const) {
+      const flag = marks[field]
+      const count = marks[`${field}_quantity`] ?? (flag === undefined ? undefined : flag ? item.quantity : 0)
+      if (count === undefined) continue
+      if (count < 0 || count > item.quantity) throw new Error(`Esta línea tiene ${item.quantity} unidades`)
+      item[`${field}_quantity`] = count
+      item[field] = count === item.quantity
+    }
     return structuredClone(order)
   },
 

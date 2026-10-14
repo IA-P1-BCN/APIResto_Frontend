@@ -105,6 +105,8 @@ function initialOrders(): Order[] {
     quantity,
     unit_price: DISHES.find((d) => d.id === dish_id)!.price,
     notes,
+    prepared_quantity: 0,
+    served_quantity: 0,
     prepared: false,
     served: false,
   })
@@ -142,12 +144,15 @@ function pastOrders(): Order[] {
       createdAt.setUTCHours(11 + Math.floor(random() * 10), Math.floor(random() * 60), 0, 0)
       const items: OrderItem[] = Array.from({ length: 1 + Math.floor(random() * 3) }, () => {
         const dish = pick(sold)
+        const quantity = 1 + Math.floor(random() * 2)
         return {
           id: itemId++,
           dish_id: dish.id,
-          quantity: 1 + Math.floor(random() * 2),
+          quantity,
           unit_price: dish.price,
           notes: null,
+          prepared_quantity: quantity,
+          served_quantity: quantity,
           prepared: true,
           served: true,
         }
