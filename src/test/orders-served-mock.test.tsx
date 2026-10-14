@@ -40,11 +40,11 @@ describe('Pedidos: platos servidos en la mesa', () => {
     const paella = await within(list).findByRole('checkbox', { name: '2× Paella de marisco' })
     expect(paella).not.toBeChecked()
     const ticket = screen.getByRole('article', { name: 'Pedido 2' })
-    expect(within(ticket).getByText('0 de 3 preparados')).toBeInTheDocument()
+    expect(within(ticket).getByText('0 de 2 preparados')).toBeInTheDocument()
 
     await user.click(paella)
     await waitFor(() => expect(within(list).getByRole('checkbox', { name: '2× Paella de marisco' })).toBeChecked())
-    expect(within(ticket).getByText('1 de 3 preparados')).toBeInTheDocument()
+    expect(within(ticket).getByText('1 de 2 preparados')).toBeInTheDocument()
     const line = db.orders.find((o) => o.id === 2)!.items.find((i) => i.dish_id === 6)!
     expect(line.prepared).toBe(true)
     expect(line.served).toBe(false)
