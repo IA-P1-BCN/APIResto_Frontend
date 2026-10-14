@@ -2,6 +2,7 @@ import { NavLink, Outlet } from 'react-router-dom'
 import { USE_MOCK } from '../config'
 import { useAuth } from '../context/useAuth'
 import { labelFor, navItemsFor, ROLE_LABEL } from '../routes/navigation'
+import ThemeToggle from './ThemeToggle'
 
 export default function Layout() {
   const { user, logout } = useAuth()
@@ -17,6 +18,7 @@ export default function Layout() {
           <span>
             {user.name} · <span className="badge">{ROLE_LABEL[user.role]}</span>
           </span>
+          <ThemeToggle />
           <button type="button" className="btn btn-secondary" onClick={logout}>
             Cerrar sesión
           </button>
