@@ -12,7 +12,7 @@ export default function Layout() {
     <div className="layout">
       <header className="topbar">
         <NavLink to="/" className="brand">
-          🍽️ RestoAPI
+          🍽️ APIResto
         </NavLink>
         <div className="user-box">
           <span>
