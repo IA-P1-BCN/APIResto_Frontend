@@ -4,6 +4,7 @@ import { ACTIVE_STATUSES, transitionsFor } from '../api/orderRules'
 import { listOrders, updateOrderItem, updateOrderStatus } from '../api/orders'
 import type { Order, OrderItem, OrderStatus } from '../api/types'
 import ErrorMessage from '../components/ErrorMessage'
+import ItemMark from '../components/ItemMark'
 import Modal from '../components/Modal'
 import NewOrderForm from '../components/NewOrderForm'
 import { useAuth } from '../context/useAuth'
@@ -60,11 +61,11 @@ export default function OrdersPage() {
     }
   }
 
-  async function toggleServed(order: Order, item: OrderItem) {
+  async function markServed(order: Order, item: OrderItem, count: number) {
     setSavingItemId(item.id)
     setActionError(null)
     try {
-      await updateOrderItem(order.id, item.id, { served: !item.served })
+      await updateOrderItem(order.id, item.id, { served_quantity: count })
       orders.reload()
     } catch (error) {
       setActionError(getErrorMessage(error))
@@ -151,25 +152,32 @@ export default function OrdersPage() {
                     <td className="order-items-cell">
                       <ul className="order-items" aria-label={`Platos del pedido ${o.id}`}>
                         {o.items.map((i) => {
-                          const text = `${i.quantity}× ${dishLabel(i.dish_id, dishNames)}`
+                          const name = dishLabel(i.dish_id, dishNames)
                           const editable = o.status !== 'paid' && o.status !== 'cancelled'
+                          const ready = i.prepared_quantity - i.served_quantity
                           return (
                             <li key={i.id} className={i.served ? 'item-served' : undefined}>
                               {editable ? (
-                                <label className="checkbox item-check">
-                                  <input
-                                    type="checkbox"
-                                    checked={i.served}
-                                    disabled={savingItemId === i.id}
-                                    onChange={() => toggleServed(o, i)}
-                                  />
-                                  <span>{text}</span>
-                                  {i.prepared && !i.served && <span className="chip chip-ready">Listo</span>}
-                                </label>
+                                <ItemMark
+                                  item={i}
+                                  field="served"
+                                  name={name}
+                                  disabled={savingItemId === i.id}
+                                  onChange={(count) => markServed(o, i, count)}
+                                >
+                                  {ready > 0 && (
+                                    <span className="chip chip-ready">
+                                      {i.quantity === 1 ? 'Listo' : `${ready} ${ready === 1 ? 'lista' : 'listas'}`}
+                                    </span>
+                                  )}
+                                </ItemMark>
                               ) : (
-                                <span>
+                                <span className="item-name">
                                   {i.served && <span aria-label="servido">✓ </span>}
-                                  {text}
+                                  {i.quantity}× {name}
+                                  {!i.served &&
+                                    i.served_quantity > 0 &&
+                                    ` (${i.served_quantity} ${i.served_quantity === 1 ? 'servida' : 'servidas'})`}
                                 </span>
                               )}
                             </li>
@@ -177,7 +185,8 @@ export default function OrdersPage() {
                         })}
                       </ul>
                       <span className="muted small">
-                        {o.items.filter((i) => i.served).length} de {o.items.length} servidos
+                        {o.items.reduce((total, i) => total + i.served_quantity, 0)} de{' '}
+                        {o.items.reduce((total, i) => total + i.quantity, 0)} servidos
                       </span>
                     </td>
                     <td>{formatPrice(o.total)}</td>

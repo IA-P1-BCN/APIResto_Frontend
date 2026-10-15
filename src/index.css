@@ -1065,7 +1065,7 @@ td.order-items-cell {
   padding-bottom: 0;
 }
 
-.order-items .item-served span {
+.order-items .item-served .item-name {
   color: var(--color-muted);
   text-decoration: line-through;
 }
@@ -1076,9 +1076,17 @@ td.order-items-cell {
   padding-bottom: 0;
 }
 
-.ticket-lines .item-prepared .item-check > span {
+.ticket-lines .item-prepared .item-name {
   color: var(--color-muted);
   text-decoration: line-through;
+}
+
+.item-counter {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
 }
 
 .chip-ready {
@@ -1135,7 +1143,8 @@ td.order-items-cell {
   align-items: center;
 }
 
-.quantity output {
+.quantity output,
+.quantity .count {
   min-width: 1.5rem;
   text-align: center;
   font-weight: 700;

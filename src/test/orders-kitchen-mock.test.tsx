@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { db } from '../api/mock/db'
 import { mockServer } from '../api/mock/server'
 import { answerConfirm } from './confirmDialog'
+import { lineText } from './orderLines'
 import { renderApp } from './renderApp'
 
 vi.mock('../config', () => ({ USE_MOCK: true, API_URL: 'http://api.test' }))
@@ -17,7 +18,7 @@ async function orderLines(id: number) {
   const list = await screen.findByRole('list', { name: `Platos del pedido ${id}` })
   return within(list)
     .getAllByRole('listitem')
-    .map((li) => li.textContent)
+    .map(lineText)
 }
 
 describe('Pedidos (sala)', () => {
@@ -118,7 +119,7 @@ describe('Cocina en tiempo real', () => {
     const inKitchen = screen.getByRole('region', { name: 'En preparación' })
     const order2 = within(pending).getByRole('article', { name: 'Pedido 2' })
     expect(order2).toHaveTextContent('Sin frutos secos')
-    expect(await within(order2).findByText('Paella de marisco')).toBeInTheDocument()
+    expect(await within(order2).findByText('2× Paella de marisco')).toBeInTheDocument()
     expect(within(inKitchen).getByRole('article', { name: 'Pedido 1' })).toHaveTextContent('Al punto')
     expect(screen.queryByRole('article', { name: 'Pedido 3' })).not.toBeInTheDocument()
   })

@@ -12,11 +12,15 @@ import { dishLabel, tableLabel, useDishNames, useDishStations, useTableNumbers }
 import { useNow } from '../hooks/useNow'
 import { formatElapsed, formatTime, parseServerTimestamp } from '../utils/format'
 import ErrorMessage from './ErrorMessage'
+import ItemMark from './ItemMark'
 
 const COLUMNS: { status: OrderStatus; title: string }[] = [
   { status: 'pending', title: 'Pendientes' },
   { status: 'in_kitchen', title: 'En preparación' },
 ]
+
+const units = (items: OrderItem[], field: 'quantity' | 'prepared_quantity') =>
+  items.reduce((total, i) => total + i[field], 0)
 
 interface Props {
   station: Station
@@ -46,11 +50,11 @@ export default function StationBoard({ station, title: pageTitle }: Props) {
     }
   }
 
-  async function togglePrepared(order: Order, item: OrderItem) {
+  async function markPrepared(order: Order, item: OrderItem, count: number) {
     setSavingItemId(item.id)
     setActionError(null)
     try {
-      applyLocal(await updateOrderItem(order.id, item.id, { prepared: !item.prepared }))
+      applyLocal(await updateOrderItem(order.id, item.id, { prepared_quantity: count }))
     } catch (err) {
       setActionError(getErrorMessage(err))
     } finally {
@@ -121,23 +125,19 @@ export default function StationBoard({ station, title: pageTitle }: Props) {
                       <ul className="ticket-lines" aria-label={`Platos del pedido ${o.id}`}>
                         {items.map((i) => (
                           <li key={i.id} className={i.prepared ? 'item-prepared' : undefined}>
-                            <label className="checkbox item-check">
-                              <input
-                                type="checkbox"
-                                checked={i.prepared}
-                                disabled={savingItemId === i.id}
-                                onChange={() => togglePrepared(o, i)}
-                              />
-                              <span>
-                                <strong>{i.quantity}×</strong> {dishLabel(i.dish_id, dishNames)}
-                              </span>
-                            </label>
+                            <ItemMark
+                              item={i}
+                              field="prepared"
+                              name={dishLabel(i.dish_id, dishNames)}
+                              disabled={savingItemId === i.id}
+                              onChange={(count) => markPrepared(o, i, count)}
+                            />
                             {i.notes && <span className="ticket-note">⚠ {i.notes}</span>}
                           </li>
                         ))}
                       </ul>
                       <span className="muted small">
-                        {items.filter((i) => i.prepared).length} de {items.length} preparados
+                        {units(items, 'prepared_quantity')} de {units(items, 'quantity')} preparados
                       </span>
                       {leadsOrder ? (
                         <div className="actions">
