@@ -5,7 +5,7 @@ import { MOCK_PASSWORD, MOCK_USERS } from '../api/mockAuth'
 import ThemeToggle from '../components/ThemeToggle'
 import { USE_MOCK } from '../config'
 import { useAuth } from '../context/useAuth'
-import { homeFor, ROLE_LABEL } from '../routes/navigation'
+import { HOME_PATH, ROLE_LABEL } from '../routes/navigation'
 
 export default function LoginPage() {
   const { login, status, user } = useAuth()
@@ -16,7 +16,7 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
-  if (status === 'authenticated' && user) return <Navigate to={homeFor(user.role)} replace />
+  if (status === 'authenticated' && user) return <Navigate to={HOME_PATH} replace />
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()

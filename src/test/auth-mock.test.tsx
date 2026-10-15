@@ -18,35 +18,35 @@ describe('login y navegación por rol (modo simulado)', () => {
 
   it.each([
     ['admin@restoapi.dev', 'Hola, Admin Demo'],
-    ['camarero@restoapi.dev', 'Pedidos'],
-    ['cocina@restoapi.dev', 'Cocina'],
-    ['barra@restoapi.dev', 'Barra'],
-    ['cliente@restoapi.dev', 'Carta'],
-  ])('al iniciar sesión, %s entra en su pantalla (%s)', async (email, heading) => {
+    ['camarero@restoapi.dev', 'Hola, Camarero Demo'],
+    ['cocina@restoapi.dev', 'Hola, Cocina Demo'],
+    ['barra@restoapi.dev', 'Hola, Barra Demo'],
+    ['cliente@restoapi.dev', 'Hola, Cliente Demo'],
+  ])('al iniciar sesión, %s entra en Inicio (%s)', async (email, heading) => {
     const { user } = renderApp('/login')
     await loginAs(user, email)
     expect(await screen.findByRole('heading', { level: 1, name: heading })).toBeInTheDocument()
   })
 
-  it('entra en su pantalla aunque se hubiera pedido otra, y nunca en "Sin acceso"', async () => {
+  it('entra en Inicio aunque se hubiera pedido otra página, y nunca en "Sin acceso"', async () => {
     const { user } = renderApp('/facturas')
     await loginAs(user, 'cocina@restoapi.dev')
-    expect(await screen.findByRole('heading', { level: 1, name: 'Cocina' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { level: 1, name: 'Hola, Cocina Demo' })).toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: '403 · Sin acceso' })).not.toBeInTheDocument()
   })
 
-  it('al cerrar sesión, el siguiente usuario entra en su pantalla y no en la del anterior', async () => {
+  it('al cerrar sesión, el siguiente usuario entra en Inicio y no en la página del anterior', async () => {
     localStorage.setItem('restoapi.token', 'mock-token-1')
     const { user } = renderApp('/facturas')
     await user.click(await screen.findByRole('button', { name: 'Cerrar sesión' }))
     await loginAs(user, 'camarero@restoapi.dev')
-    expect(await screen.findByRole('heading', { level: 1, name: 'Pedidos' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { level: 1, name: 'Hola, Camarero Demo' })).toBeInTheDocument()
   })
 
   it('el camarero ve su menú y no el de administración', async () => {
     const { user } = renderApp('/login')
     await loginAs(user, 'camarero@restoapi.dev')
-    expect(await screen.findByRole('heading', { level: 1, name: 'Pedidos' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { level: 1, name: 'Hola, Camarero Demo' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Mesas' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Pedidos' })).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: 'Usuarios' })).not.toBeInTheDocument()
@@ -68,10 +68,10 @@ describe('login y navegación por rol (modo simulado)', () => {
     expect(screen.queryByRole('link', { name: 'Pedidos' })).not.toBeInTheDocument()
   })
 
-  it('barra ve su pantalla y la carta, y no las vistas de otros roles', async () => {
+  it('barra ve en el menú su pantalla y la carta, y no las vistas de otros roles', async () => {
     const { user } = renderApp('/login')
     await loginAs(user, 'barra@restoapi.dev')
-    expect(await screen.findByRole('heading', { level: 1, name: 'Barra' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { level: 1, name: 'Hola, Barra Demo' })).toBeInTheDocument()
     expect(screen.getByText('Barra', { selector: '.badge' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Barra' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Carta' })).toBeInTheDocument()
