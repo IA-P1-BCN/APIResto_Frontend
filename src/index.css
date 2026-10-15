@@ -1218,6 +1218,22 @@ td.order-items-cell {
   padding: 1rem;
 }
 
+.btn-dish.in-order {
+  border-width: 2px;
+}
+
+.draft-hint {
+  margin: 0 0 0.5rem;
+}
+
+.draft-lines li.draft-highlight {
+  background: var(--color-info-bg);
+  border-radius: var(--radius);
+  outline: 3px solid var(--color-focus);
+  outline-offset: 2px;
+  transition: background 0.2s ease;
+}
+
 .draft-lines li {
   display: grid;
   gap: 0.35rem;
