@@ -7,7 +7,7 @@ import SimulatedProviderDialog from '../components/SimulatedProviderDialog'
 import ThemeToggle from '../components/ThemeToggle'
 import { USE_MOCK } from '../config'
 import { useAuth } from '../context/useAuth'
-import { homeFor, ROLE_LABEL } from '../routes/navigation'
+import { HOME_PATH, ROLE_LABEL } from '../routes/navigation'
 
 export default function LoginPage() {
   const { login, status, user } = useAuth()
@@ -21,7 +21,7 @@ export default function LoginPage() {
   const [submitting, setSubmitting] = useState(false)
   const [simulated, setSimulated] = useState<SocialProvider | null>(null)
 
-  if (status === 'authenticated' && user) return <Navigate to={homeFor(user.role)} replace />
+  if (status === 'authenticated' && user) return <Navigate to={HOME_PATH} replace />
 
   function startSocialLogin(provider: SocialProvider) {
     if (USE_MOCK) setSimulated(provider)
