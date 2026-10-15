@@ -3,7 +3,7 @@ import { getErrorMessage } from '../api/errors'
 import { mockServer } from '../api/mock/server'
 import { transitionsFor } from '../api/orderRules'
 import { updateOrderItem, updateOrderStatus } from '../api/orders'
-import { stationOf } from '../api/stations'
+import { coversWholeOrder, stationOf } from '../api/stations'
 import type { Order, OrderItem, OrderStatus, Station } from '../api/types'
 import { USE_MOCK } from '../config'
 import { useAuth } from '../context/useAuth'
@@ -108,7 +108,7 @@ export default function StationBoard({ station, title: pageTitle }: Props) {
                 {column.length === 0 && <p className="muted">Nada por aquí.</p>}
                 {column.map(({ o, items }) => {
                   const createdAt = parseServerTimestamp(o.created_at)
-                  const leadsOrder = station === 'kitchen' || items.length === o.items.length
+                  const leadsOrder = station === 'kitchen' || coversWholeOrder(o, items)
                   return (
                     <article
                       key={o.id}
