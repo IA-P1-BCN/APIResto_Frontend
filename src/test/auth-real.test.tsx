@@ -5,7 +5,7 @@ import type { User } from '../api/types'
 import { mockApi } from './fakeApi'
 import { renderApp } from './renderApp'
 
-vi.mock('../config', () => ({ USE_MOCK: false, API_URL: 'http://api.test' }))
+vi.mock('../config', () => ({ USE_MOCK: false, API_URL: 'http://api.test', GOOGLE_CLIENT_ID: '', GITHUB_CLIENT_ID: '' }))
 
 const ADMIN: User = { id: 1, name: 'Ada Admin', email: 'admin@restoapi.dev', role: 'admin', is_active: true }
 

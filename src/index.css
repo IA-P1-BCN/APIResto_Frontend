@@ -275,6 +275,102 @@ input {
   margin: 0;
 }
 
+.social-login {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.social-divider {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 0.9rem;
+}
+
+.social-divider::before,
+.social-divider::after {
+  content: '';
+  flex: 1;
+  border-top: 1px solid var(--color-border);
+}
+
+a.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+}
+
+.provider-sim {
+  display: grid;
+  gap: 0.75rem;
+  text-align: center;
+}
+
+.modal.modal-narrow {
+  max-width: 460px;
+}
+
+.modal .modal-content > .provider-sim {
+  padding: 3.5rem 1.5rem 1.5rem;
+}
+
+.provider-sim h2,
+.provider-sim p {
+  margin: 0;
+}
+
+.provider-sim-tag {
+  justify-self: center;
+  padding: 0.15rem 0.6rem;
+  border-radius: 999px;
+  background: var(--color-warning-bg);
+  color: var(--color-warning-text);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.provider-sim-brand {
+  font-size: 1.4rem;
+  font-weight: 700;
+}
+
+.provider-sim-account {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  text-align: left;
+}
+
+.provider-sim-avatar {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 50%;
+  background: var(--color-primary);
+  color: var(--color-primary-text);
+  font-weight: 700;
+}
+
+.provider-sim-permission {
+  padding: 0.6rem 0.75rem;
+  border-radius: var(--radius);
+  background: var(--color-neutral-bg);
+  color: var(--color-neutral-text);
+  text-align: left;
+}
+
+.provider-sim .dialog-actions {
+  justify-content: center;
+}
+
 .mock-users {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -1120,6 +1216,22 @@ td.order-items-cell {
   border: 1px dashed var(--color-border);
   border-radius: var(--radius);
   padding: 1rem;
+}
+
+.btn-dish.in-order {
+  border-width: 2px;
+}
+
+.draft-hint {
+  margin: 0 0 0.5rem;
+}
+
+.draft-lines li.draft-highlight {
+  background: var(--color-info-bg);
+  border-radius: var(--radius);
+  outline: 3px solid var(--color-focus);
+  outline-offset: 2px;
+  transition: background 0.2s ease;
 }
 
 .draft-lines li {
