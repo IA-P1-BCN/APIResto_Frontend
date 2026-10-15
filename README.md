@@ -77,6 +77,23 @@ Los datos simulados (carta, mesas, reservas y pedidos) siguen las mismas reglas 
 
 Buscar mesas libres es solo para admin y waiter, así que el cliente ve y cancela sus reservas pero no crea reservas nuevas desde la web.
 
+### Login con Google y GitHub (HU-38)
+
+En el login salen los botones *Continuar con Google* y *Continuar con GitHub* si su client id está configurado:
+
+| Variable | Valor |
+|---|---|
+| `VITE_GOOGLE_CLIENT_ID` | Client id del cliente OAuth de Google (es público) |
+| `VITE_GITHUB_CLIENT_ID` | Client id de la OAuth App de GitHub (es público) |
+
+1. El botón lleva al proveedor con `redirect_uri` = `<URL de la app>/auth/callback` y un `state` aleatorio guardado en `sessionStorage`.
+2. El proveedor vuelve a `/auth/callback?code=...&state=...`. Si el `state` no coincide, no se inicia sesión.
+3. La página envía `{code, redirect_uri}` a `POST /auth/social/{provider}` y guarda el token igual que el login normal.
+
+- Los secretos solo están en el backend (Render). En Vercel solo van los dos client id; después de cambiarlos hay que volver a desplegar, porque Vite los mete al construir.
+- La callback (`https://<app>/auth/callback`) tiene que estar registrada en Google y en GitHub, y su dominio en `ALLOWED_ORIGINS` del backend.
+- Modo simulado: los botones abren una ventana que imita a Google ("Elige una cuenta") o a GitHub ("Autorizar APIResto"). *Autorizar* entra como *Cliente Demo* y *Cancelar* muestra el mismo aviso que si se cancelara en el proveedor.
+
 ### Tiempo real (cocina y barra)
 
 La vista de cocina se conecta a `ws(s)://<API>/ws/kitchen?token=<JWT>` y escucha los eventos `order_created` y `order_status_changed` (`{"event": ..., "order": {...}}`). Como el pedido del evento llega incompleto (sin hora ni notas), cada evento recarga la lista con `GET /orders/`; los cambios de estado se aplican además al momento. Si la conexión se cae, reintenta con espera creciente (1 s, 2 s, 4 s… hasta 30 s) y, mientras tanto, consulta `GET /orders/` cada 10 s.
