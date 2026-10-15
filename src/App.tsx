@@ -15,6 +15,7 @@ import MenuPage from './pages/MenuPage'
 import NotFoundPage from './pages/NotFoundPage'
 import OrdersPage from './pages/OrdersPage'
 import PlaceholderPage from './pages/PlaceholderPage'
+import SocialCallbackPage from './pages/SocialCallbackPage'
 import ReservationsPage from './pages/ReservationsPage'
 import TablesPage from './pages/TablesPage'
 import { NAV_ITEMS } from './routes/navigation'
@@ -40,6 +41,7 @@ export default function App() {
       <WakeUpBanner />
       <Routes>
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/auth/callback" element={<SocialCallbackPage />} />
         <Route
           element={
             <RequireAuth>
