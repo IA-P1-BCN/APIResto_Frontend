@@ -7,9 +7,10 @@ interface Props {
   label: string
   onClose: () => void
   children: ReactNode
+  narrow?: boolean
 }
 
-export default function Modal({ label, onClose, children }: Props) {
+export default function Modal({ label, onClose, children, narrow = false }: Props) {
   const modalRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -47,7 +48,7 @@ export default function Modal({ label, onClose, children }: Props) {
 
   return (
     <div className="modal-backdrop">
-      <div ref={modalRef} className="modal" role="dialog" aria-modal="true" aria-label={label} onKeyDown={handleKeyDown}>
+      <div ref={modalRef} className={narrow ? 'modal modal-narrow' : 'modal'} role="dialog" aria-modal="true" aria-label={label} onKeyDown={handleKeyDown}>
         <button type="button" className="btn btn-secondary modal-close" onClick={onClose} aria-label="Cerrar">
           ✕
         </button>

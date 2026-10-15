@@ -14,6 +14,12 @@ export function getErrorMessage(error: unknown, fallback = 'Ha ocurrido un error
   return fallback
 }
 
+export function getErrorCode(error: unknown): string | undefined {
+  if (axios.isAxiosError<ApiErrorBody>(error)) return error.response?.data?.code
+  const code = (error as { code?: unknown } | null)?.code
+  return typeof code === 'string' ? code : undefined
+}
+
 export function isUnauthorized(error: unknown): boolean {
   return axios.isAxiosError(error) && error.response?.status === 401
 }
