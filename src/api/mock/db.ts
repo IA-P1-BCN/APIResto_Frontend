@@ -1,4 +1,5 @@
 import { toISODate, toServerTimestamp } from '../../utils/format'
+import { DEMO_DB_KEY, isDemoChosen } from '../demo'
 import type { Category, DiningTable, Dish, Invoice, Order, OrderItem, Reservation } from '../types'
 
 const CATEGORIES: Category[] = [
@@ -200,8 +201,29 @@ function createDb(): MockDb {
   }
 }
 
-export let db: MockDb = createDb()
+const DEMO_DB_VERSION = 1
+
+function loadDemoDb(): MockDb | null {
+  if (!isDemoChosen()) return null
+  try {
+    const saved = JSON.parse(localStorage.getItem(DEMO_DB_KEY) ?? 'null')
+    return saved?.version === DEMO_DB_VERSION ? (saved.db as MockDb) : null
+  } catch {
+    return null
+  }
+}
+
+export let db: MockDb = loadDemoDb() ?? createDb()
 
 export function resetMockDb(): void {
   db = createDb()
+}
+
+export function saveDemoDb(): void {
+  if (!isDemoChosen()) return
+  try {
+    localStorage.setItem(DEMO_DB_KEY, JSON.stringify({ version: DEMO_DB_VERSION, db }))
+  } catch {
+    // Sin almacenamiento la demo empieza de cero en cada visita
+  }
 }

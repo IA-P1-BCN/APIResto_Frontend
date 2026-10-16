@@ -60,6 +60,8 @@ Con `VITE_USE_MOCK=true` en el `.env`, el login funciona con usuarios de prueba 
 
 En la pantalla de login hay un botón por rol que rellena las credenciales. **En Vercel debe ser `false`.**
 
+**Demo en el despliegue.** Aunque la app use la API, el login ofrece *Probar la demo*: guarda `restoapi.demo=1` en el `localStorage` de ese navegador y recarga la app en modo simulado, con los mismos usuarios de prueba. No llama a la API ni toca la base de datos. Los cambios de la demo se guardan en ese navegador (`restoapi.demo.db`): quien vuelve a entrar, aunque haya cerrado sesión o la pestaña, encuentra lo que dejó. *Empezar de cero* (en el login) vuelve a los datos iniciales y *Salir de la demo* (en el login y en la cabecera) vuelve al login con la API. El modo simulado de desarrollo (`VITE_USE_MOCK=true`) no guarda nada y se reinicia al recargar.
+
 Los datos simulados (carta, mesas, reservas y pedidos) siguen las mismas reglas que la API y se reinician al recargar la página. En las vistas **Cocina** y **Barra**, el botón *Simular pedido de sala* crea un pedido que aparece al instante, como si llegara por el WebSocket.
 
 ### Vistas (HU-13)

@@ -23,7 +23,7 @@ import type {
   TableStatus,
   TopDish,
 } from '../types'
-import { db, DEFAULT_DURATION_MIN, endsAt } from './db'
+import { db, DEFAULT_DURATION_MIN, endsAt, saveDemoDb } from './db'
 import { mockEvents } from './events'
 
 const delay = (ms = 250) => new Promise((resolve) => setTimeout(resolve, ms))
@@ -156,7 +156,7 @@ function insertOrder(data: OrderCreate, waiterId: number): Order {
   return structuredClone(order)
 }
 
-export const mockServer = {
+const server = {
   async listCategories(): Promise<Category[]> {
     await delay()
     currentUser()
@@ -543,3 +543,22 @@ export const mockServer = {
     return insertOrder({ table_id: pick(tables).id, items }, 2)
   },
 }
+
+/** Cada operación de la demo guarda después los datos en el navegador (solo si se eligió la demo). */
+function savingDemo(target: typeof server): typeof server {
+  return new Proxy(target, {
+    get(obj, key, receiver) {
+      const value = Reflect.get(obj, key, receiver)
+      if (typeof value !== 'function') return value
+      return async (...args: unknown[]) => {
+        try {
+          return await value.apply(obj, args)
+        } finally {
+          saveDemoDb()
+        }
+      }
+    },
+  })
+}
+
+export const mockServer = savingDemo(server)

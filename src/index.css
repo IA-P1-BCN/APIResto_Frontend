@@ -385,6 +385,26 @@ a.btn {
   text-align: center;
 }
 
+.demo-entry {
+  display: grid;
+  gap: 0.4rem;
+  border-top: 1px solid var(--color-border);
+  padding-top: 1rem;
+  text-align: center;
+}
+
+.demo-entry .muted {
+  margin: 0;
+}
+
+.banner-demo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem 1rem;
+}
+
 .topbar {
   display: flex;
   flex-wrap: wrap;

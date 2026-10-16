@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
+import { exitDemo, isDemoChosen, resetDemo, startDemo } from '../api/demo'
 import { getErrorMessage, isUnauthorized } from '../api/errors'
 import { MOCK_PASSWORD, MOCK_USERS } from '../api/mockAuth'
 import { availableProviders, SOCIAL_LABEL, socialLoginUrl, type SocialProvider } from '../api/social'
@@ -114,6 +115,15 @@ export default function LoginPage() {
           </div>
         )}
 
+        {!USE_MOCK && (
+          <div className="demo-entry">
+            <button type="button" className="btn btn-secondary" onClick={startDemo}>
+              Probar la demo
+            </button>
+            <p className="muted small">Sin cuenta: datos de prueba solo en tu navegador.</p>
+          </div>
+        )}
+
         {USE_MOCK && (
           <div className="mock-users">
             <p className="muted">
@@ -132,6 +142,17 @@ export default function LoginPage() {
                 {ROLE_LABEL[u.role]}
               </button>
             ))}
+            {isDemoChosen() && (
+              <>
+                <p className="muted small">Tus cambios en la demo se guardan en este navegador.</p>
+                <button type="button" className="btn btn-secondary" onClick={resetDemo}>
+                  Empezar de cero
+                </button>
+                <button type="button" className="btn btn-secondary" onClick={exitDemo}>
+                  Salir de la demo
+                </button>
+              </>
+            )}
           </div>
         )}
       </form>
