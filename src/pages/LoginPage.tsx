@@ -6,6 +6,7 @@ import { MOCK_PASSWORD, MOCK_USERS } from '../api/mockAuth'
 import { availableProviders, SOCIAL_LABEL, socialLoginUrl, type SocialProvider } from '../api/social'
 import SimulatedProviderDialog from '../components/SimulatedProviderDialog'
 import ThemeToggle from '../components/ThemeToggle'
+import TwoFactorStep from '../components/TwoFactorStep'
 import { USE_MOCK } from '../config'
 import { useAuth } from '../context/useAuth'
 import { HOME_PATH, ROLE_LABEL } from '../routes/navigation'
@@ -21,8 +22,24 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [simulated, setSimulated] = useState<SocialProvider | null>(null)
+  const [mfaToken, setMfaToken] = useState<string | null>(null)
 
   if (status === 'authenticated' && user) return <Navigate to={HOME_PATH} replace />
+
+  if (mfaToken) {
+    return (
+      <div className="login-page">
+        <ThemeToggle />
+        <TwoFactorStep
+          mfaToken={mfaToken}
+          onCancel={() => {
+            setMfaToken(null)
+            setPassword('')
+          }}
+        />
+      </div>
+    )
+  }
 
   function startSocialLogin(provider: SocialProvider) {
     if (USE_MOCK) setSimulated(provider)
@@ -43,7 +60,7 @@ export default function LoginPage() {
     setError(null)
     setSubmitting(true)
     try {
-      await login(email, password)
+      setMfaToken(await login(email, password))
     } catch (err) {
       setError(isUnauthorized(err) ? 'Email o contraseña incorrectos' : getErrorMessage(err))
     } finally {

@@ -1,7 +1,8 @@
 import { GITHUB_CLIENT_ID, GOOGLE_CLIENT_ID, USE_MOCK } from '../config'
+import { toLoginResult, type LoginResult } from './auth'
 import { api } from './client'
 import { mockAuth } from './mockAuth'
-import type { LoginResponse } from './types'
+import type { LoginResponse, TwoFactorChallenge } from './types'
 
 export type SocialProvider = 'google' | 'github'
 
@@ -65,8 +66,11 @@ export function readSocialState(): { provider: SocialProvider; state: string } |
   }
 }
 
-export async function socialLogin(provider: SocialProvider, code: string): Promise<string> {
+export async function socialLogin(provider: SocialProvider, code: string): Promise<LoginResult> {
   if (USE_MOCK) return mockAuth.socialLogin(provider, code)
-  const { data } = await api.post<LoginResponse>(`/auth/social/${provider}`, { code, redirect_uri: callbackUrl() })
-  return data.access_token
+  const { data } = await api.post<LoginResponse | TwoFactorChallenge>(`/auth/social/${provider}`, {
+    code,
+    redirect_uri: callbackUrl(),
+  })
+  return toLoginResult(data)
 }

@@ -77,6 +77,7 @@ Los datos simulados (carta, mesas, reservas y pedidos) siguen las mismas reglas 
 | Facturas (HU-14) | admin, waiter (exportar CSV: solo admin) | `GET /orders/?status=served`, `POST /orders/{id}/invoice`, `GET /invoices`, `GET /exports/invoices` |
 | Estadísticas (HU-15) | admin | `GET /stats/sales`, `GET /stats/top-dishes` (filtros `from`, `to` y `limit`) |
 | Crear contraseña (HU-52) | pública, con el enlace del email: `/crear-contrasena?token=…` | `POST /auth/set-password` |
+| Seguridad (HU-37) | todos | `GET /users/me/2fa`, `POST /users/me/2fa/setup`, `POST /users/me/2fa/enable`, `POST /users/me/2fa/disable` |
 
 La página *Crear contraseña* la abre quien recibe la invitación del admin (`POST /users/invite`). En el modo simulado cualquier token funciona, salvo `mock-invalido`, `mock-usado` y `mock-caducado`, que muestran su error.
 
@@ -98,6 +99,13 @@ En el login salen los botones *Continuar con Google* y *Continuar con GitHub* si
 - Los secretos solo están en el backend (Render). En Vercel solo van los dos client id; después de cambiarlos hay que volver a desplegar, porque Vite los mete al construir.
 - La callback (`https://<app>/auth/callback`) tiene que estar registrada en Google y en GitHub, y su dominio en `ALLOWED_ORIGINS` del backend.
 - Modo simulado: los botones abren una ventana que imita a Google ("Elige una cuenta") o a GitHub ("Autorizar APIResto"). *Autorizar* entra como *Cliente Demo* y *Cancelar* muestra el mismo aviso que si se cancelara en el proveedor.
+
+### Verificación en dos pasos (HU-37)
+
+- **Activar**: en *Seguridad*, *Activar* muestra un QR (y la clave para teclearla a mano) para Google Authenticator, Authy… Se confirma con un primer código y la web enseña 8 códigos de recuperación una sola vez, con un botón para copiarlos.
+- **Entrar**: si la cuenta la tiene activada, `POST /auth/login` y `POST /auth/social/{provider}` devuelven `{mfa_required, mfa_token}` en lugar del token. La web pide el código de 6 dígitos (o uno de recuperación) y lo envía con el `mfa_token` a `POST /auth/2fa/verify`, que devuelve el token. El `mfa_token` caduca en 5 minutos: si caduca, hay que volver a iniciar sesión.
+- **Desactivar**: en *Seguridad*, con un código de la app o de recuperación.
+- Modo simulado: el código de la app es siempre `123456` y los códigos de recuperación funcionan una vez. En la demo el estado se guarda con el resto de datos (*Empezar de cero* lo borra).
 
 ### Tiempo real (cocina y barra)
 

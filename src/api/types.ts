@@ -15,6 +15,22 @@ export interface LoginResponse {
   token_type: string
 }
 
+export interface TwoFactorChallenge {
+  mfa_required: true
+  mfa_token: string
+}
+
+export interface TwoFactorStatus {
+  enabled: boolean
+  recovery_codes_left: number
+}
+
+export interface TwoFactorSetup {
+  secret: string
+  otpauth_uri: string
+  qr_svg: string
+}
+
 export interface ApiErrorBody {
   detail?: unknown
   code?: string

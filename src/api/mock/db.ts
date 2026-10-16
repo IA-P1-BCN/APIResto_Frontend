@@ -183,6 +183,13 @@ interface MockDb {
   nextReservationId: number
   nextOrderId: number
   nextOrderItemId: number
+  twoFactor?: Record<number, MockTwoFactor>
+}
+
+export interface MockTwoFactor {
+  pending: boolean
+  enabled: boolean
+  recoveryCodes: string[]
 }
 
 function createDb(): MockDb {
@@ -198,6 +205,7 @@ function createDb(): MockDb {
     nextReservationId: reservations.length + 1,
     nextOrderId: current.length + 1,
     nextOrderItemId: current.flatMap((o) => o.items).length + 1,
+    twoFactor: {},
   }
 }
 

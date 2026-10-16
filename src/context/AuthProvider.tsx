@@ -50,7 +50,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const login = useCallback(
-    async (email: string, password: string) => loginWithToken(await apiLogin(email, password)),
+    async (email: string, password: string) => {
+      const result = await apiLogin(email, password)
+      if ('mfaToken' in result) return result.mfaToken
+      await loginWithToken(result.token)
+      return null
+    },
     [loginWithToken],
   )
 
