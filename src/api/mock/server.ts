@@ -561,7 +561,6 @@ const server = {
   },
 }
 
-/** Cada operación de la demo guarda después los datos en el navegador (solo si se eligió la demo). */
 function savingDemo(target: typeof server): typeof server {
   return new Proxy(target, {
     get(obj, key, receiver) {

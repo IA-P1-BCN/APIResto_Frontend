@@ -4,11 +4,6 @@ export const DEFAULT_STATION: Station = 'kitchen'
 
 const cents = (amount: string | number) => Math.round(Number(amount) * 100)
 
-/**
- * Las líneas de una estación son todo el pedido. Desde la HU-40 el backend solo envía a cocina
- * y a barra sus propias líneas, pero `total` sigue siendo el del pedido completo: si las líneas
- * no suman el total, el pedido tiene platos de otra estación.
- */
 export function coversWholeOrder(order: Order, items: OrderItem[]): boolean {
   if (items.length !== order.items.length) return false
   const subtotal = items.reduce((sum, i) => sum + i.quantity * cents(i.unit_price), 0)
