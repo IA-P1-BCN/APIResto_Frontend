@@ -28,6 +28,7 @@ export const NAV_ITEMS: NavItem[] = [
   { path: '/facturas', label: 'Facturas', roles: ['admin', 'waiter'], description: 'Facturas y exportación CSV', hu: 'HU-14' },
   { path: '/estadisticas', label: 'Estadísticas', roles: ['admin'], description: 'Ventas y platos más vendidos', hu: 'HU-15' },
   { path: '/usuarios', label: 'Usuarios', roles: ['admin'], description: 'Personal y clientes' },
+  { path: '/seguridad', label: 'Seguridad', roles: ALL_ROLES, description: 'Verificación en dos pasos', hu: 'HU-37' },
 ]
 
 export const ROLE_LABEL: Record<Role, string> = {

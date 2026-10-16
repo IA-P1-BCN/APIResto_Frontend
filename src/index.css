@@ -1525,3 +1525,49 @@ td.order-items-cell {
     border-radius: 0;
   }
 }
+
+.two-factor {
+  display: grid;
+  gap: 1rem;
+  max-width: 560px;
+}
+
+.two-factor h2,
+.two-factor p,
+.two-factor ol {
+  margin: 0;
+}
+
+.two-factor .banner {
+  margin-bottom: 0;
+}
+
+.two-factor-qr {
+  width: 180px;
+  height: 180px;
+  background: #fff;
+  padding: 0.5rem;
+  border-radius: var(--radius);
+}
+
+.two-factor-secret {
+  word-break: break-all;
+}
+
+.recovery-codes {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 0.5rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.recovery-codes code {
+  display: block;
+  padding: 0.4rem 0.6rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  text-align: center;
+  font-size: 1rem;
+}

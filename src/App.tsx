@@ -18,6 +18,7 @@ import OrdersPage from './pages/OrdersPage'
 import PlaceholderPage from './pages/PlaceholderPage'
 import SocialCallbackPage from './pages/SocialCallbackPage'
 import ReservationsPage from './pages/ReservationsPage'
+import SecurityPage from './pages/SecurityPage'
 import SetPasswordPage from './pages/SetPasswordPage'
 import TablesPage from './pages/TablesPage'
 import { NAV_ITEMS } from './routes/navigation'
@@ -31,6 +32,7 @@ const PAGES: Record<string, ComponentType> = {
   '/barra': BarPage,
   '/facturas': InvoicesPage,
   '/estadisticas': StatsPage,
+  '/seguridad': SecurityPage,
 }
 
 export default function App() {

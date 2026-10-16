@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link, Navigate, useSearchParams } from 'react-router-dom'
+import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom'
 import { getErrorCode, getErrorMessage } from '../api/errors'
 import { clearSocialState, readSocialState, SOCIAL_LABEL, socialLogin, type SocialProvider } from '../api/social'
 import ThemeToggle from '../components/ThemeToggle'
+import TwoFactorStep from '../components/TwoFactorStep'
 import { useAuth } from '../context/useAuth'
 
 type Check = { ok: true; provider: SocialProvider; code: string } | { ok: false; message: string }
@@ -46,6 +47,8 @@ export default function SocialCallbackPage() {
   const { loginWithToken, status, user } = useAuth()
   const [check] = useState(() => checkCallback(params))
   const [error, setError] = useState<string | null>(null)
+  const [mfaToken, setMfaToken] = useState<string | null>(null)
+  const navigate = useNavigate()
   const started = useRef(false)
 
   useEffect(() => {
@@ -53,11 +56,20 @@ export default function SocialCallbackPage() {
     started.current = true
     clearSocialState()
     socialLogin(check.provider, check.code)
-      .then(loginWithToken)
+      .then((result) => ('mfaToken' in result ? setMfaToken(result.mfaToken) : loginWithToken(result.token)))
       .catch((err: unknown) => setError(socialErrorMessage(err, check.provider)))
   }, [check, loginWithToken])
 
   if (status === 'authenticated' && user) return <Navigate to="/" replace />
+
+  if (mfaToken) {
+    return (
+      <div className="login-page">
+        <ThemeToggle />
+        <TwoFactorStep mfaToken={mfaToken} onCancel={() => navigate('/login')} />
+      </div>
+    )
+  }
 
   const message = check.ok ? error : check.message
 
