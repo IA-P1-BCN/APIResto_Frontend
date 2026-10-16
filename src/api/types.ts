@@ -63,6 +63,7 @@ export interface Reservation {
   id: number
   user_id: number
   table_id: number
+  table_number?: number | null
   reserved_at: string
   duration_min: number
   ends_at: string
@@ -73,7 +74,7 @@ export interface Reservation {
 }
 
 export interface ReservationCreate {
-  table_id: number
+  table_id?: number
   reserved_at: string
   party_size: number
   duration_min?: number

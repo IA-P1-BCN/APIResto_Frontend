@@ -1,6 +1,12 @@
 import { toServerTimestamp } from '../../utils/format'
 import { mockUserFromToken } from '../mockAuth'
 import { VALID_TRANSITIONS } from '../orderRules'
+import {
+  CUSTOMER_PARTY_TOO_LARGE,
+  MAX_CUSTOMER_PARTY_SIZE,
+  noTableAvailable,
+  RESERVATION_IN_PAST,
+} from '../reservationRules'
 import { DEFAULT_STATION } from '../stations'
 import { tokenStorage } from '../tokenStorage'
 import type {
@@ -58,6 +64,14 @@ function isTableFree(tableId: number, reservedAt: string, durationMin: number, e
       r.status === 'confirmed' &&
       overlaps(r.reserved_at, r.duration_min, reservedAt, durationMin),
   )
+}
+
+function freeTables(reservedAt: string, partySize: number, durationMin: number): DiningTable[] {
+  return db.tables
+    .filter(
+      (t) => t.status !== 'out_of_service' && t.capacity >= partySize && isTableFree(t.id, reservedAt, durationMin),
+    )
+    .sort((a, b) => a.capacity - b.capacity || a.id - b.id)
 }
 
 export interface DishFilters {
@@ -286,15 +300,7 @@ const server = {
   async listAvailableTables(reservedAt: string, partySize: number): Promise<Page<DiningTable>> {
     await delay()
     currentUser('admin', 'waiter')
-    const items = db.tables
-      .filter(
-        (t) =>
-          t.status !== 'out_of_service' &&
-          t.capacity >= partySize &&
-          isTableFree(t.id, reservedAt, DEFAULT_DURATION_MIN),
-      )
-      .sort((a, b) => a.capacity - b.capacity || a.id - b.id)
-    return paginate(structuredClone(items), 1, 100)
+    return paginate(structuredClone(freeTables(reservedAt, partySize, DEFAULT_DURATION_MIN)), 1, 100)
   },
 
   async listReservations({ date }: ReservationFilters): Promise<Page<Reservation>> {
@@ -310,12 +316,23 @@ const server = {
   async createReservation(data: ReservationCreate): Promise<Reservation> {
     await delay()
     const user = currentUser('admin', 'waiter', 'customer')
-    const table = db.tables.find((t) => t.id === data.table_id)
-    if (!table) throw new Error('Mesa no encontrada')
+    const duration = data.duration_min ?? DEFAULT_DURATION_MIN
+    if (user.role === 'customer' && data.party_size > MAX_CUSTOMER_PARTY_SIZE) {
+      throw new Error(CUSTOMER_PARTY_TOO_LARGE)
+    }
+    if (data.table_id === undefined && new Date(data.reserved_at) < new Date()) {
+      throw new Error(RESERVATION_IN_PAST)
+    }
+    const table =
+      data.table_id === undefined
+        ? freeTables(data.reserved_at, data.party_size, duration)[0]
+        : db.tables.find((t) => t.id === data.table_id)
+    if (!table) {
+      throw new Error(data.table_id === undefined ? noTableAvailable(data.party_size, data.reserved_at) : 'Mesa no encontrada')
+    }
     if (data.party_size > table.capacity) {
       throw new Error(`La mesa ${table.number} es para ${table.capacity} personas como máximo`)
     }
-    const duration = data.duration_min ?? DEFAULT_DURATION_MIN
     if (!isTableFree(table.id, data.reserved_at, duration)) {
       throw new Error(`La mesa ${table.number} ya tiene una reserva en ese horario`)
     }

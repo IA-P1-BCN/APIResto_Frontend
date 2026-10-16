@@ -80,7 +80,7 @@ Los datos simulados (carta, mesas, reservas y pedidos) siguen las mismas reglas 
 
 La página *Crear contraseña* la abre quien recibe la invitación del admin (`POST /users/invite`). En el modo simulado cualquier token funciona, salvo `mock-invalido`, `mock-usado` y `mock-caducado`, que muestran su error.
 
-Buscar mesas libres es solo para admin y waiter, así que el cliente ve y cancela sus reservas pero no crea reservas nuevas desde la web.
+Buscar mesas libres es solo para admin y waiter. El cliente (HU-51) reserva con *+ Nueva reserva* indicando día, hora, personas y notas, sin elegir mesa: `POST /reservations` sin `table_id` y el restaurante le asigna la mesa libre más ajustada. La hora se envía como hora local del restaurante, sin zona. Hasta 8 personas por reserva: con más, la web avisa de que llame al restaurante. El modo simulado aplica las mismas reglas. En la lista, el cliente ve "Asignada por el restaurante" (no puede consultar las mesas); si la API devuelve `table_number` en la reserva, ve "Mesa N".
 
 ### Login con Google y GitHub (HU-38)
 
