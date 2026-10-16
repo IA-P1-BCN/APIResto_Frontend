@@ -2,6 +2,7 @@ import { useCallback, useState } from 'react'
 import { getErrorMessage } from '../api/errors'
 import { cancelReservation, deleteReservation, listReservations } from '../api/reservations'
 import type { DiningTable, Reservation } from '../api/types'
+import CustomerReservationForm from '../components/CustomerReservationForm'
 import EditReservationForm from '../components/EditReservationForm'
 import ErrorMessage from '../components/ErrorMessage'
 import Modal from '../components/Modal'
@@ -16,6 +17,10 @@ import { RESERVATION_STATUS_LABEL } from '../utils/labels'
 function when(reservation: Reservation): string {
   const date = parseLocalTimestamp(reservation.reserved_at)
   return `${formatDate(date)} a las ${formatTime(date)}`
+}
+
+function customerTable(reservation: Reservation): string {
+  return reservation.table_number ? `Mesa ${reservation.table_number}` : 'Asignada por el restaurante'
 }
 
 export default function ReservationsPage() {
@@ -39,6 +44,16 @@ export default function ReservationsPage() {
     setActionError(null)
     setNotice(`Reserva confirmada: ${when(reservation)}, mesa ${table.number}.`)
     setDate(reservation.reserved_at.slice(0, 10))
+    reservations.reload()
+  }
+
+  function handleCustomerCreated(reservation: Reservation) {
+    setFormOpen(false)
+    setActionError(null)
+    const table = reservation.table_number ? `la mesa ${reservation.table_number}` : 'una mesa'
+    setNotice(
+      `Reserva confirmada: ${when(reservation)}, para ${reservation.party_size} personas. El restaurante te ha asignado ${table}.`,
+    )
     reservations.reload()
   }
 
@@ -121,9 +136,28 @@ export default function ReservationsPage() {
         </div>
       )}
 
+      {isCustomer && !formOpen && (
+        <div className="toolbar">
+          <button
+            type="button"
+            className="btn"
+            onClick={() => {
+              setFormOpen(true)
+              setNotice(null)
+            }}
+          >
+            + Nueva reserva
+          </button>
+        </div>
+      )}
+
       {formOpen && (
         <Modal label="Nueva reserva" onClose={() => setFormOpen(false)}>
-          <NewReservationForm initialDate={date} onCreated={handleCreated} onCancel={() => setFormOpen(false)} />
+          {isCustomer ? (
+            <CustomerReservationForm onCreated={handleCustomerCreated} onCancel={() => setFormOpen(false)} />
+          ) : (
+            <NewReservationForm initialDate={date} onCreated={handleCreated} onCancel={() => setFormOpen(false)} />
+          )}
         </Modal>
       )}
 
@@ -173,7 +207,7 @@ export default function ReservationsPage() {
                     <tr key={r.id} className={r.status === 'cancelled' ? 'row-cancelled' : undefined}>
                       {isCustomer && <td>{formatDate(start)}</td>}
                       <td>{formatTime(start)}</td>
-                      <td>{tableLabel(r.table_id, tableNumbers)}</td>
+                      <td>{isCustomer ? customerTable(r) : tableLabel(r.table_id, tableNumbers)}</td>
                       <td>{r.party_size}</td>
                       <td>
                         <span className={`chip reservation-${r.status}`}>{RESERVATION_STATUS_LABEL[r.status]}</span>

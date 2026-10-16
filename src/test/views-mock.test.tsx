@@ -189,13 +189,15 @@ describe('Reservas', () => {
 
   it('el cliente solo ve sus reservas y no puede buscar mesas', async () => {
     loginAs('customer')
-    renderApp('/reservas')
+    const { user } = renderApp('/reservas')
     expect(await screen.findByRole('heading', { name: 'Mis reservas' })).toBeInTheDocument()
     expect(await screen.findByText('Cumpleaños, traen tarta')).toBeInTheDocument()
     expect(screen.queryByText('Mesa tranquila si es posible')).not.toBeInTheDocument()
     expect(screen.getAllByRole('row')).toHaveLength(3)
     expect(screen.queryByLabelText('Fecha')).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: '+ Nueva reserva' })).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: '+ Nueva reserva' }))
+    expect(screen.queryByRole('button', { name: 'Ver mesas disponibles' })).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('Mesa')).not.toBeInTheDocument()
   })
 })
 
