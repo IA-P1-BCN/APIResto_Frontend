@@ -1289,6 +1289,48 @@ td.order-items-cell {
   font-size: 1.1rem;
 }
 
+.order-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 380px), 1fr));
+  gap: 0.75rem;
+  align-items: start;
+}
+
+.order-card {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.order-card-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  padding-bottom: 0.6rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.order-card-title {
+  display: grid;
+  gap: 0.1rem;
+}
+
+.order-card-title strong {
+  font-size: 1.1rem;
+}
+
+.order-card-status {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.order-card-actions {
+  flex-basis: 100%;
+  gap: 0.5rem;
+}
+
 .row-actions > * + * {
   margin-left: 0.4rem;
 }
@@ -1453,6 +1495,16 @@ td.order-items-cell {
   margin: 0;
   border: none;
   padding-right: 4rem;
+}
+
+.modal-content > form > .actions:last-child {
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
+  margin: 0 -4rem -1rem -1.25rem;
+  padding: 0.75rem 4rem 1rem 1.25rem;
+  background: var(--color-surface);
+  border-top: 1px solid var(--color-border);
 }
 
 .modal-close {

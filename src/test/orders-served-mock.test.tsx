@@ -17,6 +17,20 @@ async function orderList(id: number) {
 const line = (orderId: number, dishId: number) =>
   db.orders.find((o) => o.id === orderId)!.items.find((i) => i.dish_id === dishId)!
 
+describe('Pedidos: botones del pedido a la vista', () => {
+  it('cada pedido lleva arriba la mesa, el estado y sus botones, antes de los platos', async () => {
+    loginAsWaiter()
+    renderApp('/pedidos')
+    const list = await orderList(2)
+    const card = list.closest('article')!
+    const cancel = within(card).getByRole('button', { name: 'Cancelar pedido 2' })
+
+    expect(within(card).getByRole('banner')).toHaveTextContent('Mesa')
+    expect(within(card).getByRole('banner')).toContainElement(cancel)
+    expect(cancel.compareDocumentPosition(list) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+})
+
 describe('Pedidos: platos servidos en la mesa', () => {
   it('el camarero marca y desmarca un plato de una unidad como servido', async () => {
     loginAsWaiter()
@@ -29,7 +43,7 @@ describe('Pedidos: platos servidos en la mesa', () => {
     await user.click(salad)
     await waitFor(() => expect(within(list).getByRole('checkbox', { name: '1× Ensalada de burrata' })).toBeChecked())
     expect(line(2, 3).served).toBe(true)
-    expect(within(list.closest('td')!).getByText('1 de 5 servidos')).toBeInTheDocument()
+    expect(within(list.closest('article')!).getByText('1 de 5 servidos')).toBeInTheDocument()
 
     await user.click(within(list).getByRole('checkbox', { name: '1× Ensalada de burrata' }))
     await waitFor(() => expect(within(list).getByRole('checkbox', { name: '1× Ensalada de burrata' })).not.toBeChecked())
@@ -105,6 +119,6 @@ describe('Pedidos: platos servidos en la mesa', () => {
     expect(within(list).queryByRole('button')).not.toBeInTheDocument()
     expect(within(list).getByLabelText('servido')).toBeInTheDocument()
     expect(within(list).getByText(/2× Café \(1 servida\)/)).toBeInTheDocument()
-    expect(within(list.closest('td')!).getByText('2 de 3 servidos')).toBeInTheDocument()
+    expect(within(list.closest('article')!).getByText('2 de 3 servidos')).toBeInTheDocument()
   })
 })
