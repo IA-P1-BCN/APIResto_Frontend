@@ -1,6 +1,7 @@
 import { useEffect, type ComponentType } from 'react'
 import { Route, Routes } from 'react-router-dom'
 import { pingHealth } from './api/auth'
+import { SET_PASSWORD_PATH } from './api/password'
 import Layout from './components/Layout'
 import { RequireAuth, RequireRole } from './components/ProtectedRoute'
 import WakeUpBanner from './components/WakeUpBanner'
@@ -17,6 +18,7 @@ import OrdersPage from './pages/OrdersPage'
 import PlaceholderPage from './pages/PlaceholderPage'
 import SocialCallbackPage from './pages/SocialCallbackPage'
 import ReservationsPage from './pages/ReservationsPage'
+import SetPasswordPage from './pages/SetPasswordPage'
 import TablesPage from './pages/TablesPage'
 import { NAV_ITEMS } from './routes/navigation'
 
@@ -40,6 +42,7 @@ export default function App() {
     <ConfirmProvider>
       <WakeUpBanner />
       <Routes>
+        <Route path={SET_PASSWORD_PATH} element={<SetPasswordPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/auth/callback" element={<SocialCallbackPage />} />
         <Route
