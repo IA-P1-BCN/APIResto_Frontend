@@ -74,6 +74,9 @@ Los datos simulados (carta, mesas, reservas y pedidos) siguen las mismas reglas 
 | Barra (HU-41) | admin, bartender | Los mismos que cocina |
 | Facturas (HU-14) | admin, waiter (exportar CSV: solo admin) | `GET /orders/?status=served`, `POST /orders/{id}/invoice`, `GET /invoices`, `GET /exports/invoices` |
 | Estadísticas (HU-15) | admin | `GET /stats/sales`, `GET /stats/top-dishes` (filtros `from`, `to` y `limit`) |
+| Crear contraseña (HU-52) | pública, con el enlace del email: `/crear-contrasena?token=…` | `POST /auth/set-password` |
+
+La página *Crear contraseña* la abre quien recibe la invitación del admin (`POST /users/invite`). En el modo simulado cualquier token funciona, salvo `mock-invalido`, `mock-usado` y `mock-caducado`, que muestran su error.
 
 Buscar mesas libres es solo para admin y waiter, así que el cliente ve y cancela sus reservas pero no crea reservas nuevas desde la web.
 
