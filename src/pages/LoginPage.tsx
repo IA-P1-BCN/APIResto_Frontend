@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
 import { exitDemo, isDemoChosen, resetDemo, startDemo } from '../api/demo'
-import { getErrorMessage, isUnauthorized } from '../api/errors'
+import { getErrorMessage, isUnauthorized, tooManyAttemptsMessage } from '../api/errors'
 import { MOCK_PASSWORD, MOCK_USERS } from '../api/mockAuth'
 import { availableProviders, SOCIAL_LABEL, socialLoginUrl, type SocialProvider } from '../api/social'
 import SimulatedProviderDialog from '../components/SimulatedProviderDialog'
@@ -62,7 +62,9 @@ export default function LoginPage() {
     try {
       setMfaToken(await login(email, password))
     } catch (err) {
-      setError(isUnauthorized(err) ? 'Email o contraseña incorrectos' : getErrorMessage(err))
+      setError(
+        tooManyAttemptsMessage(err) ?? (isUnauthorized(err) ? 'Email o contraseña incorrectos' : getErrorMessage(err)),
+      )
     } finally {
       setSubmitting(false)
     }

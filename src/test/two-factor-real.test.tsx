@@ -53,6 +53,29 @@ describe('verificación en dos pasos contra la API', () => {
     expect(localStorage.getItem('restoapi.token')).toBeNull()
   })
 
+  it('tras demasiados códigos incorrectos (429) dice cuánto esperar', async () => {
+    mockApi((config) => {
+      if (config.url === '/auth/login') return { status: 200, data: { mfa_required: true, mfa_token: 'mfa-1' } }
+      if (config.url === '/auth/2fa/verify') {
+        return {
+          status: 429,
+          data: { detail: 'Too many failed login attempts. Try again later.', code: 'too_many_attempts' },
+          headers: { 'retry-after': '45' },
+        }
+      }
+      return { status: 200 }
+    })
+    const { user } = renderApp('/login')
+    await login(user)
+
+    await user.type(await screen.findByLabelText('Código de verificación'), '123456')
+    await user.click(screen.getByRole('button', { name: 'Verificar' }))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Demasiados intentos fallidos. Vuelve a intentarlo en 1 minuto.',
+    )
+  })
+
   it('Seguridad llama a setup y enable y muestra el QR de la API', async () => {
     localStorage.setItem('restoapi.token', 'jwt-1')
     const requests = mockApi((config) => {
