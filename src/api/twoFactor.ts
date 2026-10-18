@@ -1,6 +1,6 @@
 import { USE_MOCK } from '../config'
 import { api } from './client'
-import { getErrorCode, getErrorMessage } from './errors'
+import { getErrorCode, getErrorMessage, tooManyAttemptsMessage } from './errors'
 import { mockTwoFactor } from './mockAuth'
 import { tokenStorage } from './tokenStorage'
 import type { LoginResponse, TwoFactorSetup, TwoFactorStatus } from './types'
@@ -14,7 +14,7 @@ const MESSAGES: Record<string, string> = {
 }
 
 export function twoFactorErrorMessage(error: unknown): string {
-  return MESSAGES[getErrorCode(error) ?? ''] ?? getErrorMessage(error)
+  return tooManyAttemptsMessage(error) ?? MESSAGES[getErrorCode(error) ?? ''] ?? getErrorMessage(error)
 }
 
 export async function verifyTwoFactor(mfaToken: string, code: string): Promise<string> {
