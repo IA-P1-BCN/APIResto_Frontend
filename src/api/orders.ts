@@ -1,5 +1,7 @@
 import { USE_MOCK } from '../config'
 import { api } from './client'
+import { getErrorCode } from './errors'
+import { createInvoice } from './invoices'
 import { mockServer, type OrderFilters } from './mock/server'
 import type { Order, OrderCreate, OrderItemMarks, OrderStatus } from './types'
 
@@ -21,7 +23,16 @@ export async function createOrder(order: OrderCreate): Promise<Order> {
   return data
 }
 
+async function ensureInvoice(orderId: number): Promise<void> {
+  try {
+    await createInvoice(orderId)
+  } catch (error) {
+    if (getErrorCode(error) !== 'invoice_already_exists') throw error
+  }
+}
+
 export async function updateOrderStatus(id: number, status: OrderStatus): Promise<Order> {
+  if (status === 'paid') await ensureInvoice(id)
   if (USE_MOCK) return mockServer.updateOrderStatus(id, status)
   const { data } = await api.patch<Order>(`/orders/${id}/status`, { status })
   return data

@@ -192,16 +192,48 @@ export interface MockTwoFactor {
   recoveryCodes: string[]
 }
 
+export const TAX_RATE = 0.1
+
+export function buildInvoice(id: number, order: Order, sequence: number, issuedAt: string): Invoice {
+  const totalCents = Math.round(Number(order.total) * 100)
+  const baseCents = Math.round(totalCents / (1 + TAX_RATE))
+  return {
+    id,
+    number: `F-${issuedAt.slice(0, 4)}-${String(sequence).padStart(5, '0')}`,
+    order_id: order.id,
+    base_amount: (baseCents / 100).toFixed(2),
+    tax_rate: TAX_RATE.toFixed(2),
+    tax_amount: ((totalCents - baseCents) / 100).toFixed(2),
+    total: (totalCents / 100).toFixed(2),
+    issued_at: issuedAt,
+  }
+}
+
+function paidInvoices(orders: Order[]): Invoice[] {
+  const lastSequence = new Map<string, number>()
+  return orders
+    .filter((o) => o.status === 'paid')
+    .sort((a, b) => a.created_at.localeCompare(b.created_at))
+    .map((order, index) => {
+      const issuedAt = order.updated_at ?? order.created_at
+      const year = issuedAt.slice(0, 4)
+      const sequence = (lastSequence.get(year) ?? 0) + 1
+      lastSequence.set(year, sequence)
+      return buildInvoice(index + 1, order, sequence, issuedAt)
+    })
+}
+
 function createDb(): MockDb {
   const reservations = initialReservations()
   const current = initialOrders()
+  const orders = [...pastOrders(), ...current]
   return {
     categories: structuredClone(CATEGORIES),
     dishes: structuredClone(DISHES),
     tables: structuredClone(TABLES),
     reservations,
-    orders: [...pastOrders(), ...current],
-    invoices: [],
+    orders,
+    invoices: paidInvoices(orders),
     nextReservationId: reservations.length + 1,
     nextOrderId: current.length + 1,
     nextOrderItemId: current.flatMap((o) => o.items).length + 1,
@@ -209,7 +241,7 @@ function createDb(): MockDb {
   }
 }
 
-const DEMO_DB_VERSION = 1
+const DEMO_DB_VERSION = 2
 
 function loadDemoDb(): MockDb | null {
   if (!isDemoChosen()) return null

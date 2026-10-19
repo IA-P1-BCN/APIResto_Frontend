@@ -29,7 +29,7 @@ import type {
   TableStatus,
   TopDish,
 } from '../types'
-import { db, DEFAULT_DURATION_MIN, endsAt, saveDemoDb } from './db'
+import { buildInvoice, db, DEFAULT_DURATION_MIN, endsAt, saveDemoDb } from './db'
 import { mockEvents } from './events'
 
 const delay = (ms = 250) => new Promise((resolve) => setTimeout(resolve, ms))
@@ -97,8 +97,6 @@ export interface InvoiceFilters {
   page?: number
   size?: number
 }
-
-const TAX_RATE = 0.1
 
 function invoicesInRange({ date_from, date_to }: InvoiceFilters): Invoice[] {
   const inRange = (day: string) => (!date_from || day >= date_from) && (!date_to || day <= date_to)
@@ -461,7 +459,8 @@ const server = {
     await delay()
     currentUser('admin', 'waiter')
     checkDateRange(filters)
-    return paginate(structuredClone(invoicesInRange(filters)), filters.page ?? 1, filters.size ?? 20)
+    const newestFirst = invoicesInRange(filters).reverse()
+    return paginate(structuredClone(newestFirst), filters.page ?? 1, filters.size ?? 20)
   },
 
   async createInvoice(orderId: number): Promise<Invoice> {
@@ -469,24 +468,19 @@ const server = {
     currentUser('admin', 'waiter')
     const order = db.orders.find((o) => o.id === orderId)
     if (!order) throw new Error('Pedido no encontrado')
-    if (order.status !== 'served') throw new Error('Solo se pueden facturar pedidos servidos')
+    if (order.status !== 'served' && order.status !== 'paid') {
+      throw new Error('Solo se pueden facturar pedidos servidos o pagados')
+    }
     const existing = db.invoices.find((i) => i.order_id === orderId)
-    if (existing) throw new Error(`El pedido #${orderId} ya tiene la factura ${existing.number}`)
+    if (existing) {
+      throw Object.assign(new Error(`El pedido #${orderId} ya tiene la factura ${existing.number}`), {
+        code: 'invoice_already_exists',
+      })
+    }
     const issuedAt = toServerTimestamp(new Date())
     const year = issuedAt.slice(0, 4)
     const sequence = db.invoices.filter((i) => i.number.startsWith(`F-${year}-`)).length + 1
-    const totalCents = Math.round(Number(order.total) * 100)
-    const baseCents = Math.round(totalCents / (1 + TAX_RATE))
-    const invoice: Invoice = {
-      id: nextId(db.invoices),
-      number: `F-${year}-${String(sequence).padStart(5, '0')}`,
-      order_id: orderId,
-      base_amount: (baseCents / 100).toFixed(2),
-      tax_rate: TAX_RATE.toFixed(2),
-      tax_amount: ((totalCents - baseCents) / 100).toFixed(2),
-      total: (totalCents / 100).toFixed(2),
-      issued_at: issuedAt,
-    }
+    const invoice = buildInvoice(nextId(db.invoices), order, sequence, issuedAt)
     db.invoices.push(invoice)
     return structuredClone(invoice)
   },
