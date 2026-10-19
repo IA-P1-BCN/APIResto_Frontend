@@ -139,11 +139,41 @@ describe('pedidos', () => {
   it('PATCH /orders/{id}/status y el 409 de transición no válida', async () => {
     const requests = mockApi(() => ({
       status: 409,
-      data: { detail: "Cannot change status from 'pending' to 'paid'" },
+      data: { detail: "Cannot change status from 'pending' to 'served'" },
+    }))
+    const error = await updateOrderStatus(5, 'served').catch((e: unknown) => e)
+    expect(getErrorMessage(error)).toBe("Cannot change status from 'pending' to 'served'")
+    expect(requests[0].url).toBe('/orders/5/status')
+    expect(JSON.parse(requests[0].data)).toEqual({ status: 'served' })
+  })
+
+  it('cobrar factura primero (POST /orders/{id}/invoice) y luego marca pagado', async () => {
+    const requests = mockApi((config) =>
+      config.url === '/orders/5/invoice'
+        ? { status: 201, data: { id: 1, number: 'F-2026-00001', order_id: 5 } }
+        : { status: 200, data: { id: 5, status: 'paid' } },
+    )
+    expect(await updateOrderStatus(5, 'paid')).toMatchObject({ status: 'paid' })
+    expect(requests.map((r) => `${r.method} ${r.url}`)).toEqual(['post /orders/5/invoice', 'patch /orders/5/status'])
+  })
+
+  it('cobrar un pedido ya facturado ignora el 409 invoice_already_exists', async () => {
+    const requests = mockApi((config) =>
+      config.url === '/orders/5/invoice'
+        ? { status: 409, data: { detail: 'Order 5 already has invoice F-2026-00001', code: 'invoice_already_exists' } }
+        : { status: 200, data: { id: 5, status: 'paid' } },
+    )
+    expect(await updateOrderStatus(5, 'paid')).toMatchObject({ status: 'paid' })
+    expect(requests[1].url).toBe('/orders/5/status')
+  })
+
+  it('si la factura falla por otro motivo, no se marca pagado', async () => {
+    const requests = mockApi(() => ({
+      status: 409,
+      data: { detail: 'Only served orders can be invoiced (current status: pending)', code: 'order_not_served' },
     }))
     const error = await updateOrderStatus(5, 'paid').catch((e: unknown) => e)
-    expect(getErrorMessage(error)).toBe("Cannot change status from 'pending' to 'paid'")
-    expect(requests[0].url).toBe('/orders/5/status')
-    expect(JSON.parse(requests[0].data)).toEqual({ status: 'paid' })
+    expect(getErrorMessage(error)).toContain('Only served orders')
+    expect(requests).toHaveLength(1)
   })
 })

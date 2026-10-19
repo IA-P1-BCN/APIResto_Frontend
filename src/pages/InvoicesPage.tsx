@@ -50,6 +50,7 @@ export default function InvoicesPage() {
       const invoice = await createInvoice(order.id)
       setNotice(`Factura ${invoice.number} generada para el pedido #${order.id} (${formatPrice(invoice.total)}).`)
       toInvoice.reload()
+      setPage(1)
       invoices.reload()
     } catch (error) {
       setActionError(getErrorMessage(error))
@@ -92,7 +93,7 @@ export default function InvoicesPage() {
         {toInvoice.loading && !toInvoice.data && <p className="page-message">Cargando pedidos…</p>}
         {toInvoice.data &&
           (pending.length === 0 ? (
-            <div className="card">No hay pedidos servidos pendientes de facturar.</div>
+            <div className="card">No hay pedidos pendientes de facturar.</div>
           ) : (
             <div className="table-wrap">
               <table>
@@ -110,7 +111,10 @@ export default function InvoicesPage() {
                 <tbody>
                   {pending.map((o) => (
                     <tr key={o.id}>
-                      <td>#{o.id}</td>
+                      <td>
+                        #{o.id}
+                        {o.status === 'paid' && <span className="muted small"> · ya cobrado</span>}
+                      </td>
                       <td>{tableLabel(o.table_id, tableNumbers)}</td>
                       <td>{formatTime(parseServerTimestamp(o.created_at))}</td>
                       <td>{formatPrice(o.total)}</td>
