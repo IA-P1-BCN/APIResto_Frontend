@@ -37,8 +37,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener(SESSION_EXPIRED_EVENT, logout)
   }, [logout])
 
-  const login = useCallback(async (email: string, password: string) => {
-    const token = await apiLogin(email, password)
+  const loginWithToken = useCallback(async (token: string) => {
     tokenStorage.set(token)
     try {
       const me = await fetchMe()
@@ -50,7 +49,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
-  const value = useMemo(() => ({ user, status, login, logout }), [user, status, login, logout])
+  const login = useCallback(
+    async (email: string, password: string) => {
+      const result = await apiLogin(email, password)
+      if ('mfaToken' in result) return result.mfaToken
+      await loginWithToken(result.token)
+      return null
+    },
+    [loginWithToken],
+  )
+
+  const value = useMemo(
+    () => ({ user, status, login, loginWithToken, logout }),
+    [user, status, login, loginWithToken, logout],
+  )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }

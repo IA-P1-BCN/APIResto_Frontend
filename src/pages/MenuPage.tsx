@@ -1,11 +1,11 @@
 import { useCallback, useMemo, useState } from 'react'
 import { getErrorMessage } from '../api/errors'
-import { deleteDish, DISHES_PAGE_SIZE, listCategories, listDishes } from '../api/menu'
-import type { Dish } from '../api/types'
+import { deleteDish, listAllDishes, listCategories } from '../api/menu'
+import type { Category, Dish } from '../api/types'
 import CategoryManager from '../components/CategoryManager'
 import DishForm from '../components/DishForm'
 import ErrorMessage from '../components/ErrorMessage'
-import Pagination from '../components/Pagination'
+import Modal from '../components/Modal'
 import { useAuth } from '../context/useAuth'
 import { useConfirm } from '../context/useConfirm'
 import { useQuery } from '../hooks/useQuery'
@@ -25,26 +25,42 @@ export default function MenuPage() {
   const [categoryId, setCategoryId] = useState<number | undefined>()
   const [onlyAvailable, setOnlyAvailable] = useState(false)
   const [maxPrice, setMaxPrice] = useState('')
-  const [page, setPage] = useState(1)
+  const [collapsed, setCollapsed] = useState<Set<number>>(() => new Set())
 
   const categories = useQuery(listCategories)
-  const categoryName = useMemo(
-    () => new Map((categories.data ?? []).map((c) => [c.id, c.name])),
-    [categories.data],
-  )
 
   const maxPriceNumber = maxPrice.trim() === '' || !Number.isFinite(Number(maxPrice)) ? undefined : Number(maxPrice)
   const fetchDishes = useCallback(
     () =>
-      listDishes({
+      listAllDishes({
         category_id: categoryId,
         is_available: onlyAvailable ? true : undefined,
         max_price: maxPriceNumber,
-        page,
       }),
-    [categoryId, onlyAvailable, maxPriceNumber, page],
+    [categoryId, onlyAvailable, maxPriceNumber],
   )
   const dishes = useQuery(fetchDishes)
+
+  const sections = useMemo(() => {
+    const list = dishes.data ?? []
+    const known = new Set((categories.data ?? []).map((c) => c.id))
+    const groups: { category: Category; dishes: Dish[] }[] = (categories.data ?? []).map((category) => ({
+      category,
+      dishes: list.filter((d) => d.category_id === category.id),
+    }))
+    const others = list.filter((d) => !known.has(d.category_id))
+    if (others.length) groups.push({ category: { id: 0, name: 'Otros', sort_order: Infinity }, dishes: others })
+    return groups.filter((g) => g.dishes.length > 0)
+  }, [dishes.data, categories.data])
+
+  function toggleSection(id: number) {
+    setCollapsed((current) => {
+      const next = new Set(current)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
 
   function showNotice(message: string) {
     setNotice(message)
@@ -89,10 +105,7 @@ export default function MenuPage() {
           Categoría
           <select
             value={categoryId ?? ''}
-            onChange={(e) => {
-              setCategoryId(e.target.value === '' ? undefined : Number(e.target.value))
-              setPage(1)
-            }}
+            onChange={(e) => setCategoryId(e.target.value === '' ? undefined : Number(e.target.value))}
           >
             <option value="">Todas</option>
             {(categories.data ?? []).map((c) => (
@@ -110,10 +123,7 @@ export default function MenuPage() {
             step="0.5"
             inputMode="decimal"
             value={maxPrice}
-            onChange={(e) => {
-              setMaxPrice(e.target.value)
-              setPage(1)
-            }}
+            onChange={(e) => setMaxPrice(e.target.value)}
             placeholder="Sin límite"
           />
         </label>
@@ -121,10 +131,7 @@ export default function MenuPage() {
           <input
             type="checkbox"
             checked={onlyAvailable}
-            onChange={(e) => {
-              setOnlyAvailable(e.target.checked)
-              setPage(1)
-            }}
+            onChange={(e) => setOnlyAvailable(e.target.checked)}
           />
           Solo disponibles
         </label>
@@ -157,24 +164,28 @@ export default function MenuPage() {
       )}
 
       {isAdmin && categoriesOpen && categories.data && (
-        <CategoryManager
-          categories={categories.data}
-          onChanged={(message) => {
-            showNotice(message)
-            categories.reload()
-            dishes.reload()
-          }}
-        />
+        <Modal label="Categorías" onClose={() => setCategoriesOpen(false)}>
+          <CategoryManager
+            categories={categories.data}
+            onChanged={(message) => {
+              showNotice(message)
+              categories.reload()
+              dishes.reload()
+            }}
+          />
+        </Modal>
       )}
 
       {isAdmin && dishForm && categories.data && (
-        <DishForm
-          key={dishForm.mode === 'edit' ? dishForm.dish.id : 'new'}
-          categories={categories.data}
-          dish={dishForm.mode === 'edit' ? dishForm.dish : undefined}
-          onSaved={handleDishSaved}
-          onCancel={() => setDishForm(null)}
-        />
+        <Modal label={dishForm.mode === 'edit' ? 'Editar plato' : 'Nuevo plato'} onClose={() => setDishForm(null)}>
+          <DishForm
+            key={dishForm.mode === 'edit' ? dishForm.dish.id : 'new'}
+            categories={categories.data}
+            dish={dishForm.mode === 'edit' ? dishForm.dish : undefined}
+            onSaved={handleDishSaved}
+            onCancel={() => setDishForm(null)}
+          />
+        </Modal>
       )}
 
       {notice && (
@@ -186,65 +197,77 @@ export default function MenuPage() {
       {dishes.error && <ErrorMessage message={dishes.error} onRetry={dishes.reload} />}
       {dishes.loading && !dishes.data && <p className="page-message">Cargando carta…</p>}
 
-      {dishes.data && (
-        <>
-          {dishes.data.items.length === 0 ? (
-            <div className="card">No hay platos con estos filtros.</div>
-          ) : (
-            <ul className="cards dish-list" aria-busy={dishes.loading}>
-              {dishes.data.items.map((dish) => (
-                <li key={dish.id} className={`card dish${dish.is_available ? '' : ' dish-unavailable'}`}>
-                  <div className="card-header">
-                    <strong>{dish.name}</strong>
-                    <span className="price">{formatPrice(dish.price)}</span>
-                  </div>
-                  <span className="muted small">{categoryName.get(dish.category_id)}</span>
-                  {dish.description && <p className="dish-description">{dish.description}</p>}
-                  <div className="chips">
-                    {!dish.is_available && <span className="chip chip-warning">No disponible</span>}
-                    {splitAllergens(dish.allergens).map((a) => (
-                      <span key={a} className="chip">
-                        {a}
-                      </span>
-                    ))}
-                  </div>
-                  {isAdmin && (
-                    <div className="actions">
-                      <button
-                        type="button"
-                        className="btn btn-secondary btn-small"
-                        onClick={() => {
-                          setDishForm({ mode: 'edit', dish })
-                          setNotice(null)
-                        }}
-                        aria-label={`Editar ${dish.name}`}
-                      >
-                        Editar
-                      </button>
-                      <button
-                        type="button"
-                        className="btn btn-secondary btn-small"
-                        disabled={deletingId === dish.id}
-                        onClick={() => handleDeleteDish(dish)}
-                        aria-label={`Borrar ${dish.name}`}
-                      >
-                        Borrar
-                      </button>
-                    </div>
+      {dishes.data &&
+        (sections.length === 0 ? (
+          <div className="card">No hay platos con estos filtros.</div>
+        ) : (
+          <>
+            <p className="muted">{dishes.data.length} platos</p>
+            {sections.map(({ category, dishes: items }) => {
+              const open = !collapsed.has(category.id)
+              return (
+                <section key={category.id} className="menu-section" aria-labelledby={`categoria-${category.id}`}>
+                  <h2 id={`categoria-${category.id}`}>
+                    <button
+                      type="button"
+                      className="section-toggle"
+                      aria-expanded={open}
+                      aria-controls={open ? `platos-${category.id}` : undefined}
+                      onClick={() => toggleSection(category.id)}
+                    >
+                      {category.name} <span className="muted small">({items.length})</span>
+                    </button>
+                  </h2>
+                  {open && (
+                    <ul id={`platos-${category.id}`} className="cards dish-list" aria-busy={dishes.loading}>
+                      {items.map((dish) => (
+                        <li key={dish.id} className={`card dish${dish.is_available ? '' : ' dish-unavailable'}`}>
+                          <div className="card-header">
+                            <strong>{dish.name}</strong>
+                            <span className="price">{formatPrice(dish.price)}</span>
+                          </div>
+                          {dish.description && <p className="dish-description">{dish.description}</p>}
+                          <div className="chips">
+                            {!dish.is_available && <span className="chip chip-warning">No disponible</span>}
+                            {splitAllergens(dish.allergens).map((a) => (
+                              <span key={a} className="chip">
+                                {a}
+                              </span>
+                            ))}
+                          </div>
+                          {isAdmin && (
+                            <div className="actions">
+                              <button
+                                type="button"
+                                className="btn btn-secondary btn-small"
+                                onClick={() => {
+                                  setDishForm({ mode: 'edit', dish })
+                                  setNotice(null)
+                                }}
+                                aria-label={`Editar ${dish.name}`}
+                              >
+                                Editar
+                              </button>
+                              <button
+                                type="button"
+                                className="btn btn-secondary btn-small"
+                                disabled={deletingId === dish.id}
+                                onClick={() => handleDeleteDish(dish)}
+                                aria-label={`Borrar ${dish.name}`}
+                              >
+                                Borrar
+                              </button>
+                            </div>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
                   )}
-                </li>
-              ))}
-            </ul>
-          )}
-          <Pagination
-            page={dishes.data.page}
-            size={dishes.data.size || DISHES_PAGE_SIZE}
-            total={dishes.data.total}
-            onChange={setPage}
-            label="platos"
-          />
-        </>
-      )}
+                </section>
+              )
+            })}
+          </>
+        ))}
     </>
   )
 }

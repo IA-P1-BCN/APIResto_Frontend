@@ -1,11 +1,12 @@
 import { toISODate, toServerTimestamp } from '../../utils/format'
-import type { Category, DiningTable, Dish, Order, OrderItem, Reservation } from '../types'
+import { DEMO_DB_KEY, isDemoChosen } from '../demo'
+import type { Category, DiningTable, Dish, Invoice, Order, OrderItem, Reservation } from '../types'
 
 const CATEGORIES: Category[] = [
-  { id: 1, name: 'Entrantes', sort_order: 1 },
-  { id: 2, name: 'Principales', sort_order: 2 },
-  { id: 3, name: 'Postres', sort_order: 3 },
-  { id: 4, name: 'Bebidas', sort_order: 4 },
+  { id: 1, name: 'Entrantes', sort_order: 1, station: 'kitchen' },
+  { id: 2, name: 'Principales', sort_order: 2, station: 'kitchen' },
+  { id: 3, name: 'Postres', sort_order: 3, station: 'bar' },
+  { id: 4, name: 'Bebidas', sort_order: 4, station: 'bar' },
 ]
 
 const dish = (
@@ -105,6 +106,10 @@ function initialOrders(): Order[] {
     quantity,
     unit_price: DISHES.find((d) => d.id === dish_id)!.price,
     notes,
+    prepared_quantity: 0,
+    served_quantity: 0,
+    prepared: false,
+    served: false,
   })
   const o = (id: number, table_id: number, status: Order['status'], min: number, items: OrderItem[]): Order => ({
     id,
@@ -123,34 +128,110 @@ function initialOrders(): Order[] {
   ]
 }
 
+const DAY_MS = 24 * 60 * 60 * 1000
+const SOLD_DISH_IDS = [1, 2, 3, 6, 7, 8, 9, 11, 12, 13, 14, 15, 16]
+
+function pastOrders(): Order[] {
+  let seed = 7
+  const random = () => (seed = (seed * 9301 + 49297) % 233280) / 233280
+  const pick = <T,>(list: T[]) => list[Math.floor(random() * list.length)]
+  const sold = DISHES.filter((d) => SOLD_DISH_IDS.includes(d.id))
+  const orders: Order[] = []
+  let itemId = 1001
+  for (let daysAgo = 13; daysAgo >= 1; daysAgo--) {
+    const count = 2 + Math.floor(random() * 4)
+    for (let n = 0; n < count; n++) {
+      const createdAt = new Date(Date.now() - daysAgo * DAY_MS)
+      createdAt.setUTCHours(11 + Math.floor(random() * 10), Math.floor(random() * 60), 0, 0)
+      const items: OrderItem[] = Array.from({ length: 1 + Math.floor(random() * 3) }, () => {
+        const dish = pick(sold)
+        const quantity = 1 + Math.floor(random() * 2)
+        return {
+          id: itemId++,
+          dish_id: dish.id,
+          quantity,
+          unit_price: dish.price,
+          notes: null,
+          prepared_quantity: quantity,
+          served_quantity: quantity,
+          prepared: true,
+          served: true,
+        }
+      })
+      orders.push({
+        id: 1000 + orders.length + 1,
+        table_id: pick(TABLES).id,
+        waiter_id: 2,
+        status: 'paid',
+        total: items.reduce((t, i) => t + i.quantity * Number(i.unit_price), 0).toFixed(2),
+        created_at: toServerTimestamp(createdAt),
+        updated_at: toServerTimestamp(createdAt),
+        items,
+      })
+    }
+  }
+  return orders
+}
+
 interface MockDb {
   categories: Category[]
   dishes: Dish[]
   tables: DiningTable[]
   reservations: Reservation[]
   orders: Order[]
+  invoices: Invoice[]
   nextReservationId: number
   nextOrderId: number
   nextOrderItemId: number
+  twoFactor?: Record<number, MockTwoFactor>
+}
+
+export interface MockTwoFactor {
+  pending: boolean
+  enabled: boolean
+  recoveryCodes: string[]
 }
 
 function createDb(): MockDb {
   const reservations = initialReservations()
-  const orders = initialOrders()
+  const current = initialOrders()
   return {
     categories: structuredClone(CATEGORIES),
     dishes: structuredClone(DISHES),
     tables: structuredClone(TABLES),
     reservations,
-    orders,
+    orders: [...pastOrders(), ...current],
+    invoices: [],
     nextReservationId: reservations.length + 1,
-    nextOrderId: orders.length + 1,
-    nextOrderItemId: orders.flatMap((o) => o.items).length + 1,
+    nextOrderId: current.length + 1,
+    nextOrderItemId: current.flatMap((o) => o.items).length + 1,
+    twoFactor: {},
   }
 }
 
-export let db: MockDb = createDb()
+const DEMO_DB_VERSION = 1
+
+function loadDemoDb(): MockDb | null {
+  if (!isDemoChosen()) return null
+  try {
+    const saved = JSON.parse(localStorage.getItem(DEMO_DB_KEY) ?? 'null')
+    return saved?.version === DEMO_DB_VERSION ? (saved.db as MockDb) : null
+  } catch {
+    return null
+  }
+}
+
+export let db: MockDb = loadDemoDb() ?? createDb()
 
 export function resetMockDb(): void {
   db = createDb()
+}
+
+export function saveDemoDb(): void {
+  if (!isDemoChosen()) return
+  try {
+    localStorage.setItem(DEMO_DB_KEY, JSON.stringify({ version: DEMO_DB_VERSION, db }))
+  } catch {
+    // Sin almacenamiento la demo empieza de cero en cada visita
+  }
 }

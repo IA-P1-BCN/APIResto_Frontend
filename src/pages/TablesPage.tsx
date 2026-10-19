@@ -3,6 +3,7 @@ import { getErrorMessage } from '../api/errors'
 import { deleteTable, listTables, updateTableStatus } from '../api/tables'
 import type { DiningTable, TableStatus } from '../api/types'
 import ErrorMessage from '../components/ErrorMessage'
+import Modal from '../components/Modal'
 import TableForm from '../components/TableForm'
 import { useAuth } from '../context/useAuth'
 import { useConfirm } from '../context/useConfirm'
@@ -86,13 +87,15 @@ export default function TablesPage() {
       )}
 
       {isAdmin && tableForm && (
-        <TableForm
-          key={tableForm.mode === 'edit' ? tableForm.table.id : 'new'}
-          table={tableForm.mode === 'edit' ? tableForm.table : undefined}
-          suggestedNumber={Math.max(0, ...list.map((t) => t.number)) + 1}
-          onSaved={handleSaved}
-          onCancel={() => setTableForm(null)}
-        />
+        <Modal label={tableForm.mode === 'edit' ? 'Editar mesa' : 'Nueva mesa'} onClose={() => setTableForm(null)}>
+          <TableForm
+            key={tableForm.mode === 'edit' ? tableForm.table.id : 'new'}
+            table={tableForm.mode === 'edit' ? tableForm.table : undefined}
+            suggestedNumber={Math.max(0, ...list.map((t) => t.number)) + 1}
+            onSaved={handleSaved}
+            onCancel={() => setTableForm(null)}
+          />
+        </Modal>
       )}
 
       {notice && (

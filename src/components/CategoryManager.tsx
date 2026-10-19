@@ -1,9 +1,12 @@
 import { useState, type FormEvent } from 'react'
 import { getErrorMessage } from '../api/errors'
 import { createCategory, deleteCategory, updateCategory } from '../api/menu'
-import type { Category } from '../api/types'
+import { DEFAULT_STATION } from '../api/stations'
+import type { Category, Station } from '../api/types'
 import { useConfirm } from '../context/useConfirm'
 import ErrorMessage from './ErrorMessage'
+
+const STATION_LABEL: Record<Station, string> = { kitchen: 'Cocina', bar: 'Barra' }
 
 interface Props {
   categories: Category[]
@@ -16,6 +19,7 @@ export default function CategoryManager({ categories, onChanged }: Props) {
   const [editing, setEditing] = useState<Category | null>(null)
   const [name, setName] = useState('')
   const [sortOrder, setSortOrder] = useState(String(nextSortOrder))
+  const [station, setStation] = useState<Station>(DEFAULT_STATION)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -23,12 +27,13 @@ export default function CategoryManager({ categories, onChanged }: Props) {
     setEditing(category)
     setName(category?.name ?? '')
     setSortOrder(String(category?.sort_order ?? nextSortOrder))
+    setStation(category?.station ?? DEFAULT_STATION)
     setError(null)
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    const data = { name: name.trim(), sort_order: Number(sortOrder) || 0 }
+    const data = { name: name.trim(), sort_order: Number(sortOrder) || 0, station }
     setBusy(true)
     setError(null)
     try {
@@ -72,7 +77,10 @@ export default function CategoryManager({ categories, onChanged }: Props) {
         {categories.map((c) => (
           <li key={c.id}>
             <span>
-              <strong>{c.name}</strong> <span className="muted small">· orden {c.sort_order}</span>
+              <strong>{c.name}</strong>{' '}
+              <span className="muted small">
+                · orden {c.sort_order} · {STATION_LABEL[c.station ?? DEFAULT_STATION]}
+              </span>
             </span>
             <span className="actions">
               <button
@@ -111,6 +119,16 @@ export default function CategoryManager({ categories, onChanged }: Props) {
         <label>
           Orden en la carta
           <input type="number" step="1" value={sortOrder} onChange={(e) => setSortOrder(e.target.value)} />
+        </label>
+        <label>
+          Se prepara en
+          <select value={station} onChange={(e) => setStation(e.target.value as Station)}>
+            {Object.entries(STATION_LABEL).map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </select>
         </label>
         <div className="actions">
           <button type="submit" className="btn" disabled={busy}>

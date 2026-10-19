@@ -1,34 +1,70 @@
 import { useState, type FormEvent } from 'react'
-import { Navigate, useLocation, useNavigate, type Location } from 'react-router-dom'
-import { getErrorMessage, isUnauthorized } from '../api/errors'
+import { Navigate, useNavigate } from 'react-router-dom'
+import { exitDemo, isDemoChosen, resetDemo, startDemo } from '../api/demo'
+import { getErrorMessage, isUnauthorized, tooManyAttemptsMessage } from '../api/errors'
 import { MOCK_PASSWORD, MOCK_USERS } from '../api/mockAuth'
+import { availableProviders, SOCIAL_LABEL, socialLoginUrl, type SocialProvider } from '../api/social'
+import SimulatedProviderDialog from '../components/SimulatedProviderDialog'
+import ThemeToggle from '../components/ThemeToggle'
+import TwoFactorStep from '../components/TwoFactorStep'
 import { USE_MOCK } from '../config'
 import { useAuth } from '../context/useAuth'
-import { ROLE_LABEL } from '../routes/navigation'
+import { HOME_PATH, ROLE_LABEL } from '../routes/navigation'
 
 export default function LoginPage() {
-  const { login, status } = useAuth()
+  const { login, status, user } = useAuth()
   const navigate = useNavigate()
-  const location = useLocation()
-  const from = (location.state as { from?: Location } | null)?.from?.pathname ?? '/'
+  const providers = availableProviders()
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
+  const [simulated, setSimulated] = useState<SocialProvider | null>(null)
+  const [mfaToken, setMfaToken] = useState<string | null>(null)
 
-  if (status === 'authenticated') return <Navigate to={from} replace />
+  if (status === 'authenticated' && user) return <Navigate to={HOME_PATH} replace />
+
+  if (mfaToken) {
+    return (
+      <div className="login-page">
+        <ThemeToggle />
+        <TwoFactorStep
+          mfaToken={mfaToken}
+          onCancel={() => {
+            setMfaToken(null)
+            setPassword('')
+          }}
+        />
+      </div>
+    )
+  }
+
+  function startSocialLogin(provider: SocialProvider) {
+    if (USE_MOCK) setSimulated(provider)
+    else window.location.assign(socialLoginUrl(provider))
+  }
+
+  function finishSimulated(provider: SocialProvider, authorized: boolean) {
+    const url = new URL(socialLoginUrl(provider), window.location.origin)
+    if (!authorized) {
+      url.searchParams.delete('code')
+      url.searchParams.set('error', 'access_denied')
+    }
+    navigate(`${url.pathname}${url.search}`)
+  }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setError(null)
     setSubmitting(true)
     try {
-      await login(email, password)
-      navigate(from, { replace: true })
+      setMfaToken(await login(email, password))
     } catch (err) {
-      setError(isUnauthorized(err) ? 'Email o contraseña incorrectos' : getErrorMessage(err))
+      setError(
+        tooManyAttemptsMessage(err) ?? (isUnauthorized(err) ? 'Email o contraseña incorrectos' : getErrorMessage(err)),
+      )
     } finally {
       setSubmitting(false)
     }
@@ -36,8 +72,9 @@ export default function LoginPage() {
 
   return (
     <div className="login-page">
+      <ThemeToggle />
       <form className="card login-card" onSubmit={handleSubmit}>
-        <h1>🍽️ RestoAPI</h1>
+        <h1>🍽️ APIResto</h1>
         <p className="muted">Inicia sesión para continuar</p>
 
         <label>
@@ -84,6 +121,28 @@ export default function LoginPage() {
           {submitting ? 'Entrando…' : 'Entrar'}
         </button>
 
+        {providers.length > 0 && (
+          <div className="social-login">
+            <p className="social-divider">
+              <span>o</span>
+            </p>
+            {providers.map((p) => (
+              <button key={p} type="button" className="btn btn-secondary" onClick={() => startSocialLogin(p)}>
+                Continuar con {SOCIAL_LABEL[p]}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {!USE_MOCK && (
+          <div className="demo-entry">
+            <button type="button" className="btn btn-secondary" onClick={startDemo}>
+              Probar la demo
+            </button>
+            <p className="muted small">Sin cuenta: datos de prueba solo en tu navegador.</p>
+          </div>
+        )}
+
         {USE_MOCK && (
           <div className="mock-users">
             <p className="muted">
@@ -102,9 +161,29 @@ export default function LoginPage() {
                 {ROLE_LABEL[u.role]}
               </button>
             ))}
+            {isDemoChosen() && (
+              <>
+                <p className="muted small">Tus cambios en la demo se guardan en este navegador.</p>
+                <button type="button" className="btn btn-secondary" onClick={resetDemo}>
+                  Empezar de cero
+                </button>
+                <button type="button" className="btn btn-secondary" onClick={exitDemo}>
+                  Salir de la demo
+                </button>
+              </>
+            )}
           </div>
         )}
       </form>
+
+      {simulated && (
+        <SimulatedProviderDialog
+          provider={simulated}
+          onAuthorize={() => finishSimulated(simulated, true)}
+          onCancel={() => finishSimulated(simulated, false)}
+          onClose={() => setSimulated(null)}
+        />
+      )}
     </div>
   )
 }

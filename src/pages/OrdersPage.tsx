@@ -1,9 +1,11 @@
 import { useCallback, useState } from 'react'
 import { getErrorMessage } from '../api/errors'
 import { ACTIVE_STATUSES, transitionsFor } from '../api/orderRules'
-import { listOrders, updateOrderStatus } from '../api/orders'
-import type { Order, OrderStatus } from '../api/types'
+import { listOrders, updateOrderItem, updateOrderStatus } from '../api/orders'
+import type { Order, OrderItem, OrderStatus } from '../api/types'
 import ErrorMessage from '../components/ErrorMessage'
+import ItemMark from '../components/ItemMark'
+import Modal from '../components/Modal'
 import NewOrderForm from '../components/NewOrderForm'
 import { useAuth } from '../context/useAuth'
 import { useConfirm } from '../context/useConfirm'
@@ -22,6 +24,7 @@ export default function OrdersPage() {
   const [notice, setNotice] = useState<string | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
   const [changingId, setChangingId] = useState<number | null>(null)
+  const [savingItemId, setSavingItemId] = useState<number | null>(null)
 
   const fetchOrders = useCallback(() => {
     const statuses = filter === 'all' ? undefined : filter === 'active' ? ACTIVE_STATUSES : [filter]
@@ -55,6 +58,19 @@ export default function OrdersPage() {
       setActionError(getErrorMessage(error))
     } finally {
       setChangingId(null)
+    }
+  }
+
+  async function markServed(order: Order, item: OrderItem, count: number) {
+    setSavingItemId(item.id)
+    setActionError(null)
+    try {
+      await updateOrderItem(order.id, item.id, { served_quantity: count })
+      orders.reload()
+    } catch (error) {
+      setActionError(getErrorMessage(error))
+    } finally {
+      setSavingItemId(null)
     }
   }
 
@@ -93,7 +109,11 @@ export default function OrdersPage() {
         )}
       </div>
 
-      {formOpen && <NewOrderForm onCreated={handleCreated} onCancel={() => setFormOpen(false)} />}
+      {formOpen && (
+        <Modal label="Nuevo pedido" onClose={() => setFormOpen(false)}>
+          <NewOrderForm onCreated={handleCreated} onCancel={() => setFormOpen(false)} />
+        </Modal>
+      )}
 
       {notice && (
         <div className="banner banner-success" role="status">
@@ -108,58 +128,80 @@ export default function OrdersPage() {
         (list.length === 0 ? (
           <div className="card">No hay pedidos.</div>
         ) : (
-          <div className="table-wrap">
-            <table aria-busy={orders.loading}>
-              <thead>
-                <tr>
-                  <th>#</th>
-                  <th>Mesa</th>
-                  <th>Hora</th>
-                  <th>Platos</th>
-                  <th>Total</th>
-                  <th>Estado</th>
-                  <th>
-                    <span className="sr-only">Acciones</span>
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {list.map((o) => (
-                  <tr key={o.id}>
-                    <td>{o.id}</td>
-                    <td>{tableNumbers.get(o.table_id) ?? o.table_id}</td>
-                    <td>{formatTime(parseServerTimestamp(o.created_at))}</td>
-                    <td className="order-items-cell">
-                      <ul className="order-items" aria-label={`Platos del pedido ${o.id}`}>
-                        {o.items.map((i) => (
-                          <li key={i.id}>
-                            {i.quantity}× {dishLabel(i.dish_id, dishNames)}
-                          </li>
-                        ))}
-                      </ul>
-                    </td>
-                    <td>{formatPrice(o.total)}</td>
-                    <td>
+          <div className="order-cards" aria-busy={orders.loading}>
+            {list.map((o) => {
+              const transitions = transitionsFor(user.role, o.status)
+              const editable = o.status !== 'paid' && o.status !== 'cancelled'
+              return (
+                <article key={o.id} className="card order-card" aria-label={`Pedido ${o.id}`}>
+                  <header className="order-card-header">
+                    <div className="order-card-title">
+                      <strong>{tableLabel(o.table_id, tableNumbers)}</strong>
+                      <span className="muted small">
+                        #{o.id} · {formatTime(parseServerTimestamp(o.created_at))}
+                      </span>
+                    </div>
+                    <div className="order-card-status">
                       <span className={`chip order-${o.status}`}>{ORDER_STATUS_LABEL[o.status]}</span>
-                    </td>
-                    <td className="row-actions">
-                      {transitionsFor(user.role, o.status).map((t) => (
-                        <button
-                          key={t.to}
-                          type="button"
-                          className="btn btn-secondary btn-small"
-                          disabled={changingId === o.id}
-                          onClick={() => changeStatus(o, t.to)}
-                          aria-label={`${t.action} pedido ${o.id}`}
-                        >
-                          {t.action}
-                        </button>
-                      ))}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                      <strong>{formatPrice(o.total)}</strong>
+                    </div>
+                    {transitions.length > 0 && (
+                      <div className="actions order-card-actions">
+                        {transitions.map((t) => (
+                          <button
+                            key={t.to}
+                            type="button"
+                            className="btn btn-secondary btn-small"
+                            disabled={changingId === o.id}
+                            onClick={() => changeStatus(o, t.to)}
+                            aria-label={`${t.action} pedido ${o.id}`}
+                          >
+                            {t.action}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </header>
+                  <ul className="order-items" aria-label={`Platos del pedido ${o.id}`}>
+                    {o.items.map((i) => {
+                      const name = dishLabel(i.dish_id, dishNames)
+                      const ready = i.prepared_quantity - i.served_quantity
+                      return (
+                        <li key={i.id} className={i.served ? 'item-served' : undefined}>
+                          {editable ? (
+                            <ItemMark
+                              item={i}
+                              field="served"
+                              name={name}
+                              disabled={savingItemId === i.id}
+                              onChange={(count) => markServed(o, i, count)}
+                            >
+                              {ready > 0 && (
+                                <span className="chip chip-ready">
+                                  {i.quantity === 1 ? 'Listo' : `${ready} ${ready === 1 ? 'lista' : 'listas'}`}
+                                </span>
+                              )}
+                            </ItemMark>
+                          ) : (
+                            <span className="item-name">
+                              {i.served && <span aria-label="servido">✓ </span>}
+                              {i.quantity}× {name}
+                              {!i.served &&
+                                i.served_quantity > 0 &&
+                                ` (${i.served_quantity} ${i.served_quantity === 1 ? 'servida' : 'servidas'})`}
+                            </span>
+                          )}
+                        </li>
+                      )
+                    })}
+                  </ul>
+                  <span className="muted small">
+                    {o.items.reduce((total, i) => total + i.served_quantity, 0)} de{' '}
+                    {o.items.reduce((total, i) => total + i.quantity, 0)} servidos
+                  </span>
+                </article>
+              )
+            })}
           </div>
         ))}
     </>

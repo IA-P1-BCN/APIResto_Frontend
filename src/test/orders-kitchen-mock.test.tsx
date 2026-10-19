@@ -2,6 +2,7 @@ import { screen, waitFor, within } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { db } from '../api/mock/db'
 import { mockServer } from '../api/mock/server'
+import { lineText } from './orderLines'
 import { renderApp } from './renderApp'
 
 vi.mock('../config', () => ({ USE_MOCK: true, API_URL: 'http://api.test' }))
@@ -16,7 +17,7 @@ async function orderLines(id: number) {
   const list = await screen.findByRole('list', { name: `Platos del pedido ${id}` })
   return within(list)
     .getAllByRole('listitem')
-    .map((li) => li.textContent)
+    .map(lineText)
 }
 
 describe('Pedidos (sala)', () => {
@@ -30,7 +31,7 @@ describe('Pedidos (sala)', () => {
     await within(form).findByRole('option', { name: 'Mesa 1 · Interior' })
     await user.selectOptions(within(form).getByLabelText('Mesa'), 'Mesa 1 · Interior')
     await user.click(await within(form).findByRole('button', { name: 'Añadir Croquetas de jamón' }))
-    await user.click(within(form).getByRole('button', { name: 'Añadir Croquetas de jamón' }))
+    await user.click(within(form).getByRole('button', { name: 'Añadir otro de Croquetas de jamón' }))
     await user.click(within(form).getByRole('button', { name: 'Añadir Café' }))
     await user.type(within(form).getByLabelText('Notas de Croquetas de jamón'), 'Sin sal')
 
@@ -62,6 +63,28 @@ describe('Pedidos (sala)', () => {
     await user.click(within(form).getByRole('button', { name: 'Quitar uno de Café' }))
     expect(within(form).getByText('Añade platos desde la carta.')).toBeInTheDocument()
     expect(within(form).getByRole('button', { name: 'Enviar a cocina' })).toBeDisabled()
+  })
+
+  it('pulsar en la carta un plato que ya está en la comanda no lo añade: lleva a su línea', async () => {
+    loginAs('waiter')
+    const { user } = renderApp('/pedidos')
+    await user.click(await screen.findByRole('button', { name: '+ Nuevo pedido' }))
+    const form = screen.getByRole('form', { name: 'Nuevo pedido' })
+    await user.click(await within(form).findByRole('button', { name: 'Añadir Café' }))
+    await user.click(within(form).getByRole('button', { name: 'Añadir Café' }))
+
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
+    expect(within(form).getByLabelText('Cantidad de Café')).toHaveTextContent('1')
+    expect(within(form).getByText('Café ya está en la comanda: cambia la cantidad con + y −.')).toHaveAttribute('role', 'status')
+    const plus = within(form).getByRole('button', { name: 'Añadir otro de Café' })
+    expect(plus).toHaveFocus()
+    expect(plus.closest('li')).toHaveClass('draft-highlight')
+    expect(within(form).getByRole('button', { name: 'Añadir Café' })).toHaveTextContent('×1')
+
+    await user.click(plus)
+    expect(within(form).getByLabelText('Cantidad de Café')).toHaveTextContent('2')
+    expect(within(form).queryByText(/ya está en la comanda/)).not.toBeInTheDocument()
+    expect(within(form).getByRole('button', { name: 'Añadir Café' })).toHaveTextContent('×2')
   })
 
   it('la carta del pedido no ofrece platos agotados ni mesas fuera de servicio', async () => {
@@ -97,7 +120,7 @@ describe('Cocina en tiempo real', () => {
     const inKitchen = screen.getByRole('region', { name: 'En preparación' })
     const order2 = within(pending).getByRole('article', { name: 'Pedido 2' })
     expect(order2).toHaveTextContent('Sin frutos secos')
-    expect(await within(order2).findByText('Paella de marisco')).toBeInTheDocument()
+    expect(await within(order2).findByText('2× Paella de marisco')).toBeInTheDocument()
     expect(within(inKitchen).getByRole('article', { name: 'Pedido 1' })).toHaveTextContent('Al punto')
     expect(screen.queryByRole('article', { name: 'Pedido 3' })).not.toBeInTheDocument()
   })

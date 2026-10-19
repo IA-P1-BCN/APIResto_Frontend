@@ -15,24 +15,48 @@ function loginAs(role: keyof typeof TOKEN) {
 }
 
 describe('Carta', () => {
-  it('muestra la carta paginada', async () => {
+  it('muestra toda la carta separada por categorías, en orden', async () => {
     loginAs('customer')
-    const { user } = renderApp('/carta')
-    expect(await screen.findByText('Croquetas de jamón')).toBeInTheDocument()
-    expect(screen.getByText('Página 1 de 2 · 16 platos')).toBeInTheDocument()
-    expect(screen.queryByText('Café')).not.toBeInTheDocument()
-
-    await user.click(screen.getByRole('button', { name: 'Siguiente →' }))
-    expect(await screen.findByText('Café')).toBeInTheDocument()
-    expect(screen.getByText('Página 2 de 2 · 16 platos')).toBeInTheDocument()
+    renderApp('/carta')
+    expect(await screen.findByText('16 platos')).toBeInTheDocument()
+    expect(screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent)).toEqual([
+      'Entrantes (5)',
+      'Principales (5)',
+      'Postres (3)',
+      'Bebidas (3)',
+    ])
+    const postres = screen.getByRole('region', { name: 'Postres (3)' })
+    expect(within(postres).getByText('Tarta de queso')).toBeInTheDocument()
+    expect(within(postres).queryByText('Croquetas de jamón')).not.toBeInTheDocument()
+    expect(within(screen.getByRole('region', { name: 'Bebidas (3)' })).getByText('Café')).toBeInTheDocument()
+    expect(screen.queryByRole('navigation', { name: 'Paginación' })).not.toBeInTheDocument()
   })
 
-  it('filtra por categoría', async () => {
+  it('cada sección se puede plegar y desplegar', async () => {
+    loginAs('customer')
+    const { user } = renderApp('/carta')
+    const entrantes = await screen.findByRole('button', { name: 'Entrantes (5)' })
+    expect(entrantes).toHaveAttribute('aria-expanded', 'true')
+    expect(screen.getByText('Croquetas de jamón')).toBeInTheDocument()
+
+    await user.click(entrantes)
+    expect(entrantes).toHaveAttribute('aria-expanded', 'false')
+    expect(screen.queryByText('Croquetas de jamón')).not.toBeInTheDocument()
+    expect(screen.getByText('Tarta de queso')).toBeInTheDocument()
+
+    entrantes.focus()
+    await user.keyboard('{Enter}')
+    expect(entrantes).toHaveAttribute('aria-expanded', 'true')
+    expect(screen.getByText('Croquetas de jamón')).toBeInTheDocument()
+  })
+
+  it('filtra por categoría y solo muestra esa sección', async () => {
     loginAs('waiter')
     const { user } = renderApp('/carta')
     await screen.findByRole('option', { name: 'Postres' })
     await user.selectOptions(screen.getByLabelText('Categoría'), 'Postres')
-    expect(await screen.findByText('Página 1 de 1 · 3 platos')).toBeInTheDocument()
+    expect(await screen.findByText('3 platos')).toBeInTheDocument()
+    expect(screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent)).toEqual(['Postres (3)'])
     expect(screen.getByText('Tarta de queso')).toBeInTheDocument()
     expect(screen.queryByText('Croquetas de jamón')).not.toBeInTheDocument()
   })
@@ -44,11 +68,11 @@ describe('Carta', () => {
     expect(screen.getAllByText('No disponible')).toHaveLength(2)
 
     await user.click(screen.getByLabelText('Solo disponibles'))
-    expect(await screen.findByText('Página 1 de 2 · 14 platos')).toBeInTheDocument()
+    expect(await screen.findByText('14 platos')).toBeInTheDocument()
     expect(screen.queryByText('Gazpacho')).not.toBeInTheDocument()
 
     await user.type(screen.getByLabelText('Precio máximo (€)'), '6')
-    expect(await screen.findByText('Página 1 de 1 · 6 platos')).toBeInTheDocument()
+    expect(await screen.findByText('6 platos')).toBeInTheDocument()
   })
 
   it('muestra los alérgenos de cada plato', async () => {
@@ -165,13 +189,15 @@ describe('Reservas', () => {
 
   it('el cliente solo ve sus reservas y no puede buscar mesas', async () => {
     loginAs('customer')
-    renderApp('/reservas')
+    const { user } = renderApp('/reservas')
     expect(await screen.findByRole('heading', { name: 'Mis reservas' })).toBeInTheDocument()
     expect(await screen.findByText('Cumpleaños, traen tarta')).toBeInTheDocument()
     expect(screen.queryByText('Mesa tranquila si es posible')).not.toBeInTheDocument()
     expect(screen.getAllByRole('row')).toHaveLength(3)
     expect(screen.queryByLabelText('Fecha')).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: '+ Nueva reserva' })).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: '+ Nueva reserva' }))
+    expect(screen.queryByRole('button', { name: 'Ver mesas disponibles' })).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('Mesa')).not.toBeInTheDocument()
   })
 })
 

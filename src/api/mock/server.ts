@@ -1,23 +1,35 @@
 import { toServerTimestamp } from '../../utils/format'
 import { mockUserFromToken } from '../mockAuth'
 import { VALID_TRANSITIONS } from '../orderRules'
+import {
+  CUSTOMER_PARTY_TOO_LARGE,
+  MAX_CUSTOMER_PARTY_SIZE,
+  noTableAvailable,
+  RESERVATION_IN_PAST,
+} from '../reservationRules'
+import { DEFAULT_STATION } from '../stations'
 import { tokenStorage } from '../tokenStorage'
 import type {
   Category,
   DiningTable,
   Dish,
+  Invoice,
   Order,
   OrderCreate,
   OrderItem,
+  OrderItemMarks,
   OrderStatus,
   Page,
   Reservation,
   ReservationCreate,
   ReservationUpdate,
   Role,
+  Station,
+  SalesSummary,
   TableStatus,
+  TopDish,
 } from '../types'
-import { db, DEFAULT_DURATION_MIN, endsAt } from './db'
+import { db, DEFAULT_DURATION_MIN, endsAt, saveDemoDb } from './db'
 import { mockEvents } from './events'
 
 const delay = (ms = 250) => new Promise((resolve) => setTimeout(resolve, ms))
@@ -54,6 +66,14 @@ function isTableFree(tableId: number, reservedAt: string, durationMin: number, e
   )
 }
 
+function freeTables(reservedAt: string, partySize: number, durationMin: number): DiningTable[] {
+  return db.tables
+    .filter(
+      (t) => t.status !== 'out_of_service' && t.capacity >= partySize && isTableFree(t.id, reservedAt, durationMin),
+    )
+    .sort((a, b) => a.capacity - b.capacity || a.id - b.id)
+}
+
 export interface DishFilters {
   category_id?: number
   is_available?: boolean
@@ -71,6 +91,41 @@ export interface OrderFilters {
   table_id?: number
 }
 
+export interface InvoiceFilters {
+  date_from?: string
+  date_to?: string
+  page?: number
+  size?: number
+}
+
+const TAX_RATE = 0.1
+
+function invoicesInRange({ date_from, date_to }: InvoiceFilters): Invoice[] {
+  const inRange = (day: string) => (!date_from || day >= date_from) && (!date_to || day <= date_to)
+  return db.invoices.filter((i) => inRange(i.issued_at.slice(0, 10))).sort((a, b) => a.number.localeCompare(b.number))
+}
+
+function checkDateRange({ date_from, date_to }: InvoiceFilters) {
+  if (date_from && date_to && date_from > date_to) throw new Error('La fecha "desde" debe ser anterior a la fecha "hasta"')
+}
+
+export interface StatsFilters {
+  from?: string
+  to?: string
+}
+
+const SALE_STATUSES: OrderStatus[] = ['served', 'paid']
+const cents = (amount: number | string) => Math.round(Number(amount) * 100)
+const euros = (amountInCents: number) => (amountInCents / 100).toFixed(2)
+
+function sales({ from, to }: StatsFilters): Order[] {
+  if (from && to && from > to) throw new Error('La fecha "desde" debe ser anterior a la fecha "hasta"')
+  return db.orders.filter((o) => {
+    const day = o.created_at.slice(0, 10)
+    return SALE_STATUSES.includes(o.status) && (!from || day >= from) && (!to || day <= to)
+  })
+}
+
 function insertOrder(data: OrderCreate, waiterId: number): Order {
   const table = db.tables.find((t) => t.id === data.table_id)
   if (!table) throw new Error('Mesa no encontrada')
@@ -85,6 +140,10 @@ function insertOrder(data: OrderCreate, waiterId: number): Order {
       quantity: i.quantity,
       unit_price: dish.price,
       notes: i.notes?.trim() || null,
+      prepared_quantity: 0,
+      served_quantity: 0,
+      prepared: false,
+      served: false,
     }
   })
   const order: Order = {
@@ -111,7 +170,7 @@ function insertOrder(data: OrderCreate, waiterId: number): Order {
   return structuredClone(order)
 }
 
-export const mockServer = {
+const server = {
   async listCategories(): Promise<Category[]> {
     await delay()
     currentUser()
@@ -241,15 +300,7 @@ export const mockServer = {
   async listAvailableTables(reservedAt: string, partySize: number): Promise<Page<DiningTable>> {
     await delay()
     currentUser('admin', 'waiter')
-    const items = db.tables
-      .filter(
-        (t) =>
-          t.status !== 'out_of_service' &&
-          t.capacity >= partySize &&
-          isTableFree(t.id, reservedAt, DEFAULT_DURATION_MIN),
-      )
-      .sort((a, b) => a.capacity - b.capacity || a.id - b.id)
-    return paginate(structuredClone(items), 1, 100)
+    return paginate(structuredClone(freeTables(reservedAt, partySize, DEFAULT_DURATION_MIN)), 1, 100)
   },
 
   async listReservations({ date }: ReservationFilters): Promise<Page<Reservation>> {
@@ -265,12 +316,23 @@ export const mockServer = {
   async createReservation(data: ReservationCreate): Promise<Reservation> {
     await delay()
     const user = currentUser('admin', 'waiter', 'customer')
-    const table = db.tables.find((t) => t.id === data.table_id)
-    if (!table) throw new Error('Mesa no encontrada')
+    const duration = data.duration_min ?? DEFAULT_DURATION_MIN
+    if (user.role === 'customer' && data.party_size > MAX_CUSTOMER_PARTY_SIZE) {
+      throw new Error(CUSTOMER_PARTY_TOO_LARGE)
+    }
+    if (data.table_id === undefined && new Date(data.reserved_at) < new Date()) {
+      throw new Error(RESERVATION_IN_PAST)
+    }
+    const table =
+      data.table_id === undefined
+        ? freeTables(data.reserved_at, data.party_size, duration)[0]
+        : db.tables.find((t) => t.id === data.table_id)
+    if (!table) {
+      throw new Error(data.table_id === undefined ? noTableAvailable(data.party_size, data.reserved_at) : 'Mesa no encontrada')
+    }
     if (data.party_size > table.capacity) {
       throw new Error(`La mesa ${table.number} es para ${table.capacity} personas como máximo`)
     }
-    const duration = data.duration_min ?? DEFAULT_DURATION_MIN
     if (!isTableFree(table.id, data.reserved_at, duration)) {
       throw new Error(`La mesa ${table.number} ya tiene una reserva en ese horario`)
     }
@@ -335,7 +397,7 @@ export const mockServer = {
 
   async listOrders({ statuses, table_id }: OrderFilters = {}): Promise<Order[]> {
     await delay()
-    currentUser('admin', 'waiter', 'kitchen')
+    currentUser('admin', 'waiter', 'kitchen', 'bartender')
     const items = db.orders
       .filter((o) => !statuses || statuses.includes(o.status))
       .filter((o) => table_id === undefined || o.table_id === table_id)
@@ -349,9 +411,36 @@ export const mockServer = {
     return insertOrder(data, user.id)
   },
 
+  async updateOrderItem(orderId: number, itemId: number, marks: OrderItemMarks): Promise<Order> {
+    await delay()
+    const user = currentUser('admin', 'waiter', 'kitchen', 'bartender')
+    const marksPrepared = marks.prepared !== undefined || marks.prepared_quantity !== undefined
+    const marksServed = marks.served !== undefined || marks.served_quantity !== undefined
+    if (marksPrepared && user.role === 'waiter') throw new Error('No tienes permiso para esta acción')
+    if (marksServed && (user.role === 'kitchen' || user.role === 'bartender')) {
+      throw new Error('No tienes permiso para esta acción')
+    }
+    const order = db.orders.find((o) => o.id === orderId)
+    if (!order) throw new Error('Pedido no encontrado')
+    const item = order.items.find((i) => i.id === itemId)
+    if (!item) throw new Error('Línea de pedido no encontrada')
+    if (order.status === 'paid' || order.status === 'cancelled') {
+      throw new Error('No se pueden cambiar las líneas de un pedido pagado o cancelado')
+    }
+    for (const field of ['prepared', 'served'] as const) {
+      const flag = marks[field]
+      const count = marks[`${field}_quantity`] ?? (flag === undefined ? undefined : flag ? item.quantity : 0)
+      if (count === undefined) continue
+      if (count < 0 || count > item.quantity) throw new Error(`Esta línea tiene ${item.quantity} unidades`)
+      item[`${field}_quantity`] = count
+      item[field] = count === item.quantity
+    }
+    return structuredClone(order)
+  },
+
   async updateOrderStatus(id: number, status: OrderStatus): Promise<Order> {
     await delay()
-    currentUser('admin', 'waiter', 'kitchen')
+    currentUser('admin', 'waiter', 'kitchen', 'bartender')
     const order = db.orders.find((o) => o.id === id)
     if (!order) throw new Error('Pedido no encontrado')
     if (order.status !== status) {
@@ -368,9 +457,100 @@ export const mockServer = {
     return structuredClone(order)
   },
 
-  async simulateWaiterOrder(): Promise<Order> {
+  async listInvoices(filters: InvoiceFilters = {}): Promise<Page<Invoice>> {
+    await delay()
+    currentUser('admin', 'waiter')
+    checkDateRange(filters)
+    return paginate(structuredClone(invoicesInRange(filters)), filters.page ?? 1, filters.size ?? 20)
+  },
+
+  async createInvoice(orderId: number): Promise<Invoice> {
+    await delay()
+    currentUser('admin', 'waiter')
+    const order = db.orders.find((o) => o.id === orderId)
+    if (!order) throw new Error('Pedido no encontrado')
+    if (order.status !== 'served') throw new Error('Solo se pueden facturar pedidos servidos')
+    const existing = db.invoices.find((i) => i.order_id === orderId)
+    if (existing) throw new Error(`El pedido #${orderId} ya tiene la factura ${existing.number}`)
+    const issuedAt = toServerTimestamp(new Date())
+    const year = issuedAt.slice(0, 4)
+    const sequence = db.invoices.filter((i) => i.number.startsWith(`F-${year}-`)).length + 1
+    const totalCents = Math.round(Number(order.total) * 100)
+    const baseCents = Math.round(totalCents / (1 + TAX_RATE))
+    const invoice: Invoice = {
+      id: nextId(db.invoices),
+      number: `F-${year}-${String(sequence).padStart(5, '0')}`,
+      order_id: orderId,
+      base_amount: (baseCents / 100).toFixed(2),
+      tax_rate: TAX_RATE.toFixed(2),
+      tax_amount: ((totalCents - baseCents) / 100).toFixed(2),
+      total: (totalCents / 100).toFixed(2),
+      issued_at: issuedAt,
+    }
+    db.invoices.push(invoice)
+    return structuredClone(invoice)
+  },
+
+  async exportInvoicesCsv(filters: Pick<InvoiceFilters, 'date_from' | 'date_to'> = {}): Promise<string> {
+    await delay()
+    currentUser('admin')
+    checkDateRange(filters)
+    const header = 'number,issued_at,order_id,table_id,base_amount,tax_rate,tax_amount,total'
+    const rows = invoicesInRange(filters).map((i) => {
+      const tableId = db.orders.find((o) => o.id === i.order_id)?.table_id ?? ''
+      return [i.number, i.issued_at, i.order_id, tableId, i.base_amount, i.tax_rate, i.tax_amount, i.total].join(',')
+    })
+    return [header, ...rows].map((line) => `${line}\r\n`).join('')
+  },
+
+  async getSales(filters: StatsFilters = {}): Promise<SalesSummary> {
+    await delay()
+    currentUser('admin')
+    const orders = sales(filters)
+    const byDay = new Map<string, { orders_count: number; total: number }>()
+    for (const o of orders) {
+      const day = byDay.get(o.created_at.slice(0, 10)) ?? { orders_count: 0, total: 0 }
+      byDay.set(o.created_at.slice(0, 10), { orders_count: day.orders_count + 1, total: day.total + cents(o.total) })
+    }
+    const total = orders.reduce((sum, o) => sum + cents(o.total), 0)
+    return {
+      date_from: filters.from ?? null,
+      date_to: filters.to ?? null,
+      orders_count: orders.length,
+      total_sales: euros(total),
+      average_ticket: euros(orders.length ? Math.round(total / orders.length) : 0),
+      daily: [...byDay.entries()]
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([day, d]) => ({ day, orders_count: d.orders_count, total_sales: euros(d.total) })),
+    }
+  },
+
+  async getTopDishes(filters: StatsFilters & { limit?: number } = {}): Promise<TopDish[]> {
+    await delay()
+    currentUser('admin')
+    const totals = new Map<number, { quantity: number; revenue: number }>()
+    for (const item of sales(filters).flatMap((o) => o.items)) {
+      const dish = totals.get(item.dish_id) ?? { quantity: 0, revenue: 0 }
+      totals.set(item.dish_id, {
+        quantity: dish.quantity + item.quantity,
+        revenue: dish.revenue + item.quantity * cents(item.unit_price),
+      })
+    }
+    return [...totals.entries()]
+      .map(([dish_id, t]) => ({
+        dish_id,
+        name: db.dishes.find((d) => d.id === dish_id)?.name ?? `Plato ${dish_id}`,
+        quantity: t.quantity,
+        revenue: euros(t.revenue),
+      }))
+      .sort((a, b) => b.quantity - a.quantity || cents(b.revenue) - cents(a.revenue) || a.dish_id - b.dish_id)
+      .slice(0, filters.limit ?? 5)
+  },
+
+  async simulateWaiterOrder(station?: Station): Promise<Order> {
     await delay(100)
-    const available = db.dishes.filter((d) => d.is_available)
+    const stationOf = (categoryId: number) => db.categories.find((c) => c.id === categoryId)?.station ?? DEFAULT_STATION
+    const available = db.dishes.filter((d) => d.is_available && (!station || stationOf(d.category_id) === station))
     const tables = db.tables.filter((t) => t.status !== 'out_of_service')
     const pick = <T,>(list: T[]) => list[Math.floor(Math.random() * list.length)]
     const items = Array.from({ length: 1 + Math.floor(Math.random() * 3) }, () => ({
@@ -380,3 +560,21 @@ export const mockServer = {
     return insertOrder({ table_id: pick(tables).id, items }, 2)
   },
 }
+
+function savingDemo(target: typeof server): typeof server {
+  return new Proxy(target, {
+    get(obj, key, receiver) {
+      const value = Reflect.get(obj, key, receiver)
+      if (typeof value !== 'function') return value
+      return async (...args: unknown[]) => {
+        try {
+          return await value.apply(obj, args)
+        } finally {
+          saveDemoDb()
+        }
+      }
+    },
+  })
+}
+
+export const mockServer = savingDemo(server)

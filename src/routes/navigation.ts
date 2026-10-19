@@ -9,7 +9,7 @@ export interface NavItem {
   hu?: string
 }
 
-const ALL_ROLES: Role[] = ['admin', 'waiter', 'kitchen', 'customer']
+const ALL_ROLES: Role[] = ['admin', 'waiter', 'kitchen', 'bartender', 'customer']
 
 export const NAV_ITEMS: NavItem[] = [
   { path: '/carta', label: 'Carta', roles: ALL_ROLES, description: 'Categorías, platos, precios y alérgenos', hu: 'HU-13' },
@@ -24,15 +24,18 @@ export const NAV_ITEMS: NavItem[] = [
   },
   { path: '/pedidos', label: 'Pedidos', roles: ['admin', 'waiter'], description: 'Comandas por mesa', hu: 'HU-13' },
   { path: '/cocina', label: 'Cocina', roles: ['admin', 'kitchen'], description: 'Pedidos en tiempo real para cocina', hu: 'HU-13' },
-  { path: '/facturas', label: 'Facturas', roles: ['admin', 'waiter'], description: 'Facturas y exportación CSV' },
-  { path: '/estadisticas', label: 'Estadísticas', roles: ['admin'], description: 'Ventas y platos más vendidos' },
+  { path: '/barra', label: 'Barra', roles: ['admin', 'bartender'], description: 'Bebidas y postres en tiempo real', hu: 'HU-41' },
+  { path: '/facturas', label: 'Facturas', roles: ['admin', 'waiter'], description: 'Facturas y exportación CSV', hu: 'HU-14' },
+  { path: '/estadisticas', label: 'Estadísticas', roles: ['admin'], description: 'Ventas y platos más vendidos', hu: 'HU-15' },
   { path: '/usuarios', label: 'Usuarios', roles: ['admin'], description: 'Personal y clientes' },
+  { path: '/seguridad', label: 'Seguridad', roles: ALL_ROLES, description: 'Verificación en dos pasos', hu: 'HU-37' },
 ]
 
 export const ROLE_LABEL: Record<Role, string> = {
   admin: 'Administración',
   waiter: 'Sala',
   kitchen: 'Cocina',
+  bartender: 'Barra',
   customer: 'Cliente',
 }
 
@@ -43,3 +46,5 @@ export function navItemsFor(role: Role): NavItem[] {
 export function labelFor(item: NavItem, role: Role): string {
   return item.labelByRole?.[role] ?? item.label
 }
+
+export const HOME_PATH = '/'

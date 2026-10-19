@@ -1,4 +1,4 @@
-import { useMemo, useState, type FormEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { getErrorMessage } from '../api/errors'
 import { listAllDishes, listCategories } from '../api/menu'
 import { createOrder } from '../api/orders'
@@ -16,6 +16,8 @@ interface Line {
 
 const fetchAvailableDishes = () => listAllDishes({ is_available: true })
 
+const HIGHLIGHT_MS = 1500
+
 interface Props {
   onCreated: (order: Order) => void
   onCancel: () => void
@@ -30,6 +32,15 @@ export default function NewOrderForm({ onCreated, onCancel }: Props) {
   const [lines, setLines] = useState<Line[]>([])
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [highlighted, setHighlighted] = useState<number | null>(null)
+  const [hint, setHint] = useState<string | null>(null)
+  const plusButtons = useRef(new Map<number, HTMLButtonElement>())
+
+  useEffect(() => {
+    if (highlighted === null) return
+    const timer = setTimeout(() => setHighlighted(null), HIGHLIGHT_MS)
+    return () => clearTimeout(timer)
+  }, [highlighted])
 
   const usableTables = (tables.data ?? [])
     .filter((t) => t.status !== 'out_of_service')
@@ -42,16 +53,23 @@ export default function NewOrderForm({ onCreated, onCancel }: Props) {
     [categories.data, dishes.data],
   )
   const total = lines.reduce((t, l) => t + l.quantity * Number(l.dish.price), 0)
+  const quantities = new Map(lines.map((l) => [l.dish.id, l.quantity]))
 
   function add(dish: Dish) {
-    setLines((ls) => {
-      const existing = ls.find((l) => l.dish.id === dish.id)
-      if (existing) return ls.map((l) => (l === existing ? { ...l, quantity: l.quantity + 1 } : l))
-      return [...ls, { dish, quantity: 1, notes: '' }]
-    })
+    if (lines.some((l) => l.dish.id === dish.id)) {
+      setHint(`${dish.name} ya está en la comanda: cambia la cantidad con + y −.`)
+      setHighlighted(dish.id)
+      const plus = plusButtons.current.get(dish.id)
+      plus?.focus()
+      plus?.scrollIntoView?.({ block: 'nearest' })
+      return
+    }
+    setHint(null)
+    setLines((ls) => [...ls, { dish, quantity: 1, notes: '' }])
   }
 
   function changeQuantity(dishId: number, delta: number) {
+    setHint(null)
     setLines((ls) =>
       ls.map((l) => (l.dish.id === dishId ? { ...l, quantity: l.quantity + delta } : l)).filter((l) => l.quantity > 0),
     )
@@ -114,12 +132,15 @@ export default function NewOrderForm({ onCreated, onCancel }: Props) {
                   <li key={d.id}>
                     <button
                       type="button"
-                      className="btn btn-secondary btn-dish"
+                      className={`btn btn-secondary btn-dish${quantities.has(d.id) ? ' in-order' : ''}`}
                       onClick={() => add(d)}
                       aria-label={`Añadir ${d.name}`}
                     >
                       <span>{d.name}</span>
-                      <span className="price">{formatPrice(d.price)}</span>
+                      <span className="price">
+                        {quantities.has(d.id) && <span className="chip">×{quantities.get(d.id)}</span>}{' '}
+                        {formatPrice(d.price)}
+                      </span>
                     </button>
                   </li>
                 ))}
@@ -130,12 +151,17 @@ export default function NewOrderForm({ onCreated, onCancel }: Props) {
 
         <section className="ticket-draft" aria-label="Comanda">
           <h3>Comanda</h3>
+          {hint && (
+            <p className="muted small draft-hint" role="status">
+              {hint}
+            </p>
+          )}
           {lines.length === 0 ? (
             <p className="muted">Añade platos desde la carta.</p>
           ) : (
             <ul className="draft-lines">
               {lines.map((l) => (
-                <li key={l.dish.id}>
+                <li key={l.dish.id} className={highlighted === l.dish.id ? 'draft-highlight' : undefined}>
                   <div className="draft-row">
                     <span>{l.dish.name}</span>
                     <span className="quantity">
@@ -151,6 +177,10 @@ export default function NewOrderForm({ onCreated, onCancel }: Props) {
                       <button
                         type="button"
                         className="btn btn-secondary btn-small"
+                        ref={(button) => {
+                          if (button) plusButtons.current.set(l.dish.id, button)
+                          else plusButtons.current.delete(l.dish.id)
+                        }}
                         onClick={() => changeQuantity(l.dish.id, 1)}
                         aria-label={`Añadir otro de ${l.dish.name}`}
                       >

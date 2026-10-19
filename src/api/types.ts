@@ -1,4 +1,4 @@
-export type Role = 'admin' | 'waiter' | 'kitchen' | 'customer'
+export type Role = 'admin' | 'waiter' | 'kitchen' | 'bartender' | 'customer'
 
 export interface User {
   id: number
@@ -15,6 +15,22 @@ export interface LoginResponse {
   token_type: string
 }
 
+export interface TwoFactorChallenge {
+  mfa_required: true
+  mfa_token: string
+}
+
+export interface TwoFactorStatus {
+  enabled: boolean
+  recovery_codes_left: number
+}
+
+export interface TwoFactorSetup {
+  secret: string
+  otpauth_uri: string
+  qr_svg: string
+}
+
 export interface ApiErrorBody {
   detail?: unknown
   code?: string
@@ -27,10 +43,13 @@ export interface Page<T> {
   size: number
 }
 
+export type Station = 'kitchen' | 'bar'
+
 export interface Category {
   id: number
   name: string
   sort_order: number
+  station?: Station
 }
 
 export interface Dish {
@@ -60,6 +79,7 @@ export interface Reservation {
   id: number
   user_id: number
   table_id: number
+  table_number?: number | null
   reserved_at: string
   duration_min: number
   ends_at: string
@@ -70,7 +90,7 @@ export interface Reservation {
 }
 
 export interface ReservationCreate {
-  table_id: number
+  table_id?: number
   reserved_at: string
   party_size: number
   duration_min?: number
@@ -93,7 +113,15 @@ export interface OrderItem {
   quantity: number
   unit_price: string
   notes: string | null
+  prepared_quantity: number
+  served_quantity: number
+  prepared: boolean
+  served: boolean
 }
+
+export type OrderItemMarks = Partial<
+  Pick<OrderItem, 'prepared' | 'served' | 'prepared_quantity' | 'served_quantity'>
+>
 
 export interface Order {
   id: number
@@ -109,6 +137,39 @@ export interface Order {
 export interface OrderCreate {
   table_id: number
   items: { dish_id: number; quantity: number; notes?: string }[]
+}
+
+export interface Invoice {
+  id: number
+  number: string
+  order_id: number
+  base_amount: string
+  tax_rate: string
+  tax_amount: string
+  total: string
+  issued_at: string
+}
+
+export interface SalesDay {
+  day: string
+  orders_count: number
+  total_sales: string
+}
+
+export interface SalesSummary {
+  date_from: string | null
+  date_to: string | null
+  orders_count: number
+  total_sales: string
+  average_ticket: string
+  daily: SalesDay[]
+}
+
+export interface TopDish {
+  dish_id: number
+  name: string
+  quantity: number
+  revenue: string
 }
 
 export interface KitchenEvent {

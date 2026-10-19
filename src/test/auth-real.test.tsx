@@ -5,7 +5,7 @@ import type { User } from '../api/types'
 import { mockApi } from './fakeApi'
 import { renderApp } from './renderApp'
 
-vi.mock('../config', () => ({ USE_MOCK: false, API_URL: 'http://api.test' }))
+vi.mock('../config', () => ({ USE_MOCK: false, API_URL: 'http://api.test', GOOGLE_CLIENT_ID: '', GITHUB_CLIENT_ID: '' }))
 
 const ADMIN: User = { id: 1, name: 'Ada Admin', email: 'admin@restoapi.dev', role: 'admin', is_active: true }
 
@@ -45,6 +45,42 @@ describe('login contra la API', () => {
     await user.click(screen.getByRole('button', { name: 'Entrar' }))
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Email o contraseña incorrectos')
+  })
+
+  it('con demasiados intentos (429) dice cuántos minutos esperar', async () => {
+    mockApi((config) =>
+      config.url === '/auth/login'
+        ? {
+            status: 429,
+            data: { detail: 'Too many failed login attempts. Try again later.', code: 'too_many_attempts' },
+            headers: { 'retry-after': '812' },
+          }
+        : { status: 200 },
+    )
+    const { user } = renderApp('/login')
+
+    await user.type(screen.getByLabelText('Email'), 'admin@restoapi.dev')
+    await user.type(screen.getByLabelText('Contraseña'), 'secreta')
+    await user.click(screen.getByRole('button', { name: 'Entrar' }))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Demasiados intentos fallidos. Vuelve a intentarlo en 14 minutos.',
+    )
+  })
+
+  it('un 429 sin Retry-After también sale en castellano', async () => {
+    mockApi((config) =>
+      config.url === '/auth/login'
+        ? { status: 429, data: { detail: 'Too many failed login attempts. Try again later.', code: 'too_many_attempts' } }
+        : { status: 200 },
+    )
+    const { user } = renderApp('/login')
+
+    await user.type(screen.getByLabelText('Email'), 'admin@restoapi.dev')
+    await user.type(screen.getByLabelText('Contraseña'), 'secreta')
+    await user.click(screen.getByRole('button', { name: 'Entrar' }))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Demasiados intentos fallidos. Espera unos minutos')
   })
 
   it('si la API no responde, lo dice claramente', async () => {

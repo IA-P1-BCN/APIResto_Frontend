@@ -6,6 +6,8 @@ import { resetMockDb } from '../api/mock/db'
 afterEach(() => {
   cleanup()
   localStorage.clear()
+  sessionStorage.clear()
+  delete document.documentElement.dataset.theme
   resetMockDb()
   vi.restoreAllMocks()
 })
