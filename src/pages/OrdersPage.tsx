@@ -52,7 +52,11 @@ export default function OrdersPage() {
     setNotice(null)
     try {
       await updateOrderStatus(order.id, status)
-      setNotice(`Pedido #${order.id}: ${ORDER_STATUS_LABEL[status].toLowerCase()}.`)
+      setNotice(
+        status === 'paid'
+          ? `Pedido #${order.id}: facturado y pagado.`
+          : `Pedido #${order.id}: ${ORDER_STATUS_LABEL[status].toLowerCase()}.`,
+      )
       orders.reload()
     } catch (error) {
       setActionError(getErrorMessage(error))

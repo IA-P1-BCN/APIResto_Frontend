@@ -106,7 +106,8 @@ describe('Pedidos (sala)', () => {
     expect(screen.queryByRole('button', { name: 'Marcar servido pedido 1' })).not.toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: 'Marcar pagado pedido 3' }))
-    expect(await screen.findByRole('status')).toHaveTextContent('Pedido #3: pagado.')
+    expect(await screen.findByRole('status')).toHaveTextContent('Pedido #3: facturado y pagado.')
+    expect(db.invoices.some((i) => i.order_id === 3)).toBe(true)
     await waitFor(() => expect(screen.queryByRole('list', { name: 'Platos del pedido 3' })).not.toBeInTheDocument())
   })
 })

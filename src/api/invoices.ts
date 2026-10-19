@@ -43,9 +43,9 @@ async function listAllInvoices(): Promise<Invoice[]> {
 }
 
 export async function listOrdersToInvoice(): Promise<Order[]> {
-  const [served, invoices] = await Promise.all([listOrders({ statuses: ['served'] }), listAllInvoices()])
+  const [orders, invoices] = await Promise.all([listOrders({ statuses: ['served', 'paid'] }), listAllInvoices()])
   const invoiced = new Set(invoices.map((i) => i.order_id))
-  return served.filter((o) => !invoiced.has(o.id))
+  return orders.filter((o) => !invoiced.has(o.id))
 }
 
 export async function createInvoice(orderId: number): Promise<Invoice> {
